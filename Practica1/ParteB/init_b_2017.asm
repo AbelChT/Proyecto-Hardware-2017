@@ -40,7 +40,7 @@ stop:
 
 
 ################################################################################
-# Función ARM ficha_valida:
+# Funcion ARM ficha_valida:
 # :Input
 # r0 = char tablero[][DIM]
 # r1 = char f
@@ -50,33 +50,42 @@ stop:
 # r0 = result
 ################################################################################
 ARM_ficha_valida:
-        #  saves the working registers
-        # Recordad que puede modificar r0, r1, r2 y r3 sin guardarlos previamente
+#  saves the working registers
         STMFD   sp!, {r4-r11}
 
-        # Poned el código aquí:
-        # r4 = (f <= DIM) && (0 <= f) && (c <= DIM) && (0 <= c) && (tablero[f][c] != CASILLA_VACIA)
-        mov r5, #define DIM
-        mov r4 , #0
-        cmp r1, r5
-        cmple r4, r1
-        cmple r2, r5
-        cmple r4, r2
-        bgt ARM_ficha_valida_else
-        mla r6,r1, r5, r2 # obtengo en r6 la posicion del vector (sin multiplicar por 4)
+# si ((f <= DIM) && (0 <= f) && (c <= DIM) && (0 <= c) && (tablero[f][c] != CASILLA_VACIA))
+# Al ser evaluacion cortocircuitada salto despues de cada comparacion
+        mov r5, #8 /*r5 = DIM*/
+        mov r4 , #0 /*r4 = 0 , como CASILLA_VACIA=0 entonces r4=CASILLA_VACIA*/
+        cmp r1, r5 /*(f <= DIM)*/
+        bgt		ARM_ficha_validaElse
+        cmp r4, r1 /*(0 <= f)*/
+        bgt		ARM_ficha_validaElse
+        cmp r2, r5 /*(c <= DIM)*/
+        bgt		ARM_ficha_validaElse
+        cmp r4, r2 /*(0 <= c)*/
+        bgt ARM_ficha_validaElse
+        mla r6, r1, r5, r2 /*r6 la posicion del vector([f][c]) (sin multiplicar por 4)*/
         # Obtener r6 = tablero[f][c]
+        ldr r7, [r0, r6, LSL #2] /* r7 = tablero[f][c]*/
+        cmp r7 , r4 /*(tablero[f][c] != CASILLA_VACIA)*/
+        beq ARM_ficha_validaElse
+        B ARM_ficha_validaIf
 
-        cmp r7 , r4 # (tablero[f][c] != CASILLA_VACIA) revisar
-ARM_ficha_valida_inside_if:
-ARM_ficha_valida_inside_else:
-        # Si la operacion anterior es 0 entonces
-        #*posicion_valida = 1;
-        #ficha = tablero[f][c];
+ARM_ficha_validaIf:
+# *posicion_valida = 1;
+        mov r4, #1 /*r4=1*/
+        str r4, [r3]
+# ficha = tablero[f][c];
+        mov r0, r7 /* result = tablero[f][c] */
+        b ARM_ficha_valida_return
+        
+ARM_ficha_validaElse:
+# *posicion_valida = 0;
+        str r4, [r3]
+        mov r0, r4 /* result = CASILLA_VACIA*/
 
-        # Si no lo es entonces
-        #*posicion_valida = 0;
-        #ficha = CASILLA_VACIA;
-
+ARM_ficha_valida_return:
         # restore the original registers
         LDMFD   sp!, {r4-r11}
         # return to the instruccion that called the rutine and to arm mode
