@@ -32,8 +32,8 @@ Reset_Handler:
 #
         MOV     sp, #0x4000      /*  set up stack pointer (r13) */
 
-.extern     test_ficha_valida_arm
-        ldr         r5, = test_ficha_valida_arm
+.extern     test_patron_volteo_arm
+        ldr         r5, = test_patron_volteo_arm
         mov         lr, pc
         bx          r5
 
@@ -56,7 +56,7 @@ stop:
 .equ CASILLA_VACIA, 0
 ficha_valida_arm:
 #  saves the working registers
-		str r4, [sp,#-4]! /*STMFD   sp!, {r4}*/
+        str r4, [sp,#-4]! /*STMFD   sp!, {r4}*/
 
 # si ((f < DIM) && (0 <= f) && (c < DIM) && (0 <= c) && (tablero[f][c] != CASILLA_VACIA))
 # Al ser evaluacion cortocircuitada salto despues de cada comparacion
@@ -70,7 +70,7 @@ ficha_valida_arm:
         blt ficha_valida_arm_else /* salta si !(0 <= c)*/
         mov r4, #DIM
         mla r4, r1, r4, r2 /*r4 ser� la posicion del vector([f][c]) con respecto a tablero -> *tablero[f][c] = r4 + *tablero */
-        ldr r0, [r0, r4] /*r0 = tablero[f][c] para en el caso de que entre al if ya tener el resultado*/
+        ldrb r0, [r0, r4] /*r0 = tablero[f][c] para en el caso de que entre al if ya tener el resultado*/
         cmp r0 , #CASILLA_VACIA /* cmp tablero[f][c], CASILLA_VACIA */
         beq ficha_valida_arm_else /* salta si (tablero[f][c] != CASILLA_VACIA)*/
 
@@ -85,7 +85,7 @@ ficha_valida_arm_else:
 
 ficha_valida_arm_return:
         # restore the original registers
-        LDMFD   sp!, {r4} /*ldr r4,[sp],#4*/
+        ldr r4,[sp],#4 /*LDMFD   sp!, {r4} */
         # return to the instruccion that called the rutine and to arm mode
         BX      r14
 
@@ -173,20 +173,26 @@ ficha_valida_return_thumb:
 
 patron_volteo_arm:
 #  saves the working registers
-        STMFD   sp!, {fp}
-        add fp, sp , #4
-        STMFD   sp!, {r4-r11}
-        LDMFD   fp!, {r8-r10}
+        STMFD   sp!, {fp}/* Guardo el frame pointer*/
+        add fp, sp , #4/* Coloco el frame pointer en posición para cargar los datos*/
+        STMFD   sp!, {r4-r11} /*Guardo los registros*/
+        #LDMFD   fp!, {r8-r10} /*Cargo los datos pasados por pila*/
+
+        #mov r8,#-1
+
+        ldrsb r8,[fp],#4 /*LDMFD   fp!, {r4} */
+        ldrsb r9,[fp],#4 /*LDMFD   fp!, {r5} */
+        ldrsb r10,[fp],#4 /*LDMFD   fp!, {r6} */
 /*
 * r8 = char SF
 * r9 = char SC
 * r10 = char color
 */
 # Codigo
-        add r6, r2, r8
-        add r7,r3,r9
-        mov r4, r0
-        mov r5, r1
+        add r6, r2, r8 /*  FA = FA + SF */
+        add r7, r3, r9 /*  CA = CA + SC */
+        mov r4, r0 /* Guardo tablero */
+        mov r5, r1 /* Guardo longitud */
 /*
 * r4 = char tablero[][DIM]
 * r5 = int *longitud
@@ -195,15 +201,18 @@ patron_volteo_arm:
 */
 # LLamada a fichavalida
 /* Actualizo FA y CA para pasarlos*/
-        mov r1,r6
-        mov r2,r7
+        /* tablero lo paso como primer parametro*/
+        mov r1,r6 /* FA lo paso como segundo parametro*/
+        mov r2,r7 /* CA lo paso como tercer parametro*/
         sub sp,sp,#4 /* Reservo un entero en la pila para almacenar posicion_valida*/
         mov r3,sp
 /* Los registros del 0 al 3 ya están guardados en los registros 4-7 */
-        mov r11, lr
+        mov r11, lr /* Guardo el link register anterior */
 /* r11=lr */
-        mov lr, pc
-        bx =ficha_valida_arm /*para thumb usar bx y descomentar lo de arriba*/
+/*Como ya fp no se necesita se puede usar r12*/
+        ldr r12, = ficha_valida_arm
+        mov lr, pc /* Guardo el pc */
+        bx r12 /*para thumb usar bx y descomentar lo de arriba*/
         mov lr, r11 /*Recupero el lr*/
         LDMFD sp!, {r1} /*Recupero posicion_valida */
 /*
@@ -215,18 +224,29 @@ patron_volteo_arm:
         bne patron_volteo_arm_else
         cmp r0, r10
         beq patron_volteo_arm_else_if
+
 patron_volteo_arm_if:
-        ldr r2, [r5] /* r2 = longitud */
-        add r2, r2, #1
-        str r2, [r5]
+/* *longitud = *longitud + 1 y paso de parametros registro*/
+        ldr r1, [r5] /* r1 = longitud */
+        add r1, r1, #1
+        str r1, [r5]
+        /*tablero, longitud, FA, CA*/
+        mov r0, r4 /* Guardo tablero */
+        mov r1,r5
+        mov r2,r6 /* FA lo paso como tercer parametro*/
+        mov r3,r7 /* CA lo paso como cuarto parametro*/
 
 # LLamada a patronVolteo
 /*No hace falta guardar los registros ya que no se van a usar*/
-        STMFD sp!, {r8-r10}
-        mov r11, lr
-/* r11=lr */
+        #STMFD sp!, {r8-r10} /*Paso los parametros correspondientes por la pila*/
+        strb r10, [sp,#-4]! /*STMFD   sp!, {r4}*/
+        strb r9, [sp,#-4]! /*STMFD   sp!, {r4}*/
+        strb r8, [sp,#-4]! /*STMFD   sp!, {r4}*/
+
+        mov r11, lr /* guardo lr */
+        ldr r12, = patron_volteo_arm /*para thumb usar bx y descomentar lo de arriba*/
         mov lr, pc
-        bx =patron_volteo_arm /*para thumb usar bx y descomentar lo de arriba*/
+        bx r12
         mov lr, r11 /*Recupero el lr*/
         add sp, sp ,#12 /*Elimino los parametros de la pila*/
 # Fin lLamada a patronVolteo
@@ -236,8 +256,8 @@ patron_volteo_arm_if:
 patron_volteo_arm_else_if:
         ldr r2, [r5] /* r2 = longitud */
         cmp r2 , #0
-        movlt r0, #PATRON_ENCONTRADO
-        movge r0, #NO_HAY_PATRON
+        movgt r0, #PATRON_ENCONTRADO
+        movle r0, #NO_HAY_PATRON
         b patron_volteo_return
 patron_volteo_arm_else:
         mov r0, #NO_HAY_PATRON

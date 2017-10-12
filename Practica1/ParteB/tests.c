@@ -102,6 +102,23 @@ int patron_volteo(char tablero[][DIM], int *longitud, char FA, char CA, char SF,
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// voltea n fichas en la dirección que toque
+// SF y SC son las cantidades a sumar para movernos en la dirección que toque
+// color indica el color de la pieza que se acaba de colocar
+// FA y CA son la fila y columna a analizar
+void voltear(char tablero[][DIM], char FA, char CA, char SF, char SC, int n, char color)
+{
+    int i;
+
+    for (i = 0; i < n; i++)
+    {
+        FA = FA + SF;
+        CA = CA + SC;
+        tablero[FA][CA] = color;
+    }
+}
+
 /*
  * Mejorar
  */
@@ -163,37 +180,69 @@ void test_ficha_valida_arm()
 
 }
 
+
 void test_patron_volteo_arm()
 {
 	int voltea=0;
+	char cv = CASILLA_VACIA;
 	char vSF[DIM] = {-1,-1, 0, 1, 1, 1, 0,-1};
 	char vSC[DIM] = { 0, 1, 1, 1, 0,-1,-1,-1};
-	char __attribute__ ((aligned (8))) tablero1[DIM][DIM] = {
-		        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-		        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-		        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-		        {CASILLA_VACIA,CASILLA_VACIA,1,2,2,1,CASILLA_VACIA,CASILLA_VACIA},
-		        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-		        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-		        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-		        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA}
+	char __attribute__ ((aligned (8))) tableros[3][DIM][DIM] = {
+		        {{cv,cv,cv,cv,cv,cv,cv,cv},		// tablero de prueba 1
+		        {cv,cv,cv,cv,cv,cv,cv,cv},
+		        {cv,cv,cv,cv,cv,cv,cv,cv},
+		        {cv,cv,1,2,2,1,cv,cv},			//(3,2) blancas
+		        {cv,cv,cv,cv,cv,cv,cv,cv},
+		        {cv,cv,cv,cv,cv,cv,cv,cv},
+		        {cv,cv,cv,cv,cv,cv,cv,cv},
+		        {cv,cv,cv,cv,cv,cv,cv,cv}},
+
+		        {{cv,cv,cv,cv,cv,cv,cv,cv},		// tablero de prueba 2
+		        {cv,cv,2,cv,cv,cv,cv,cv},
+		        {2,cv,1,cv,cv,cv,cv,cv},
+		        {cv,1,1,cv,cv,cv,cv,cv},
+		        {2,1,2,1,1,1,2,cv},				//(4,2) negras
+		        {cv,cv,1,cv,cv,cv,cv,cv},
+		        {cv,cv,2,cv,cv,cv,cv,cv},
+		        {cv,cv,cv,cv,cv,cv,cv,cv}},
+
+		        {{cv,cv,cv,cv,2,1,1,2},			// tablero de prueba 3
+		        {cv,cv,cv,cv,cv,cv,1,1},		// (0,7) negras
+		        {cv,cv,cv,cv,cv,1,cv,2},
+		        {cv,cv,cv,cv,1,cv,cv,cv},
+		        {cv,cv,cv,1,cv,cv,cv,cv},
+		        {cv,cv,1,cv,cv,cv,cv,cv},
+		        {cv,1,cv,cv,cv,cv,cv,cv},
+		        {2,cv,cv,cv,cv,cv,cv,cv}}
 	};
+
+	char cases[][3]={
+			{3,2,1},{4,2,2},{0,7,2}
+	};
+
     char SF, SC; // cantidades a sumar para movernos en la direcciï¿½n que toque
-    int i, flip, patron;
+    int i,j, flipC, flipT, patronC, patronT, pruebas,PrimerFallo;
+    pruebas=3;
+    PrimerFallo=0;
+    j=0;
+    while (j<pruebas && !PrimerFallo){
+    	i=0;
+    	while (i < DIM && !PrimerFallo)
+		{
+			SF = vSF[i];
+			SC = vSC[i];
+			// flip: numero de fichas a voltear
+			flipC = 0; flipT = 0;
+			patronC = patron_volteo(tableros[j], &flipC, cases[j][0],cases[j][1], SF, SC, cases[j][2]);
+			patronT = patron_volteo_arm(tableros[j], &flipT, cases[j][0],cases[j][1], SF, SC, cases[j][2]); //patron_volteo_arm
+			//printf("Flip: %d \n", flip);
 
-    for (i = 0; i < DIM; i++) // 0 es Norte, 1 NE, 2 E ...
-    {
-        SF = vSF[i];
-        SC = vSC[i];
-        // flip: numero de fichas a voltear
-        flip = 0;
-        patron = patron_volteo(tablero, &flip, 3, 2, SF, SC, 1);
-        //printf("Flip: %d \n", flip);
-        if (patron == PATRON_ENCONTRADO )
-        {
-            voltear(tablero, 3, 2, SF, SC, flip, 1);
-            voltea=1;
-        }
+			if (patronC != patronT || flipC != flipT){
+				PrimerFallo=j+1;
+				break;
+			}
+			i++;
+		}
+		j++;
     }
-
 }
