@@ -5,6 +5,8 @@
  *      Author: Abel
  */
 // Tamaï¿½o del tablero
+
+
 #define DIM   8
 
 // Valores que puede devolver la funciï¿½n patron_volteo())
@@ -245,4 +247,110 @@ void test_patron_volteo_arm()
 		}
 		j++;
     }
+}
+
+char __attribute__ ((aligned (8))) tablero_tiempos[DIM][DIM] = {
+	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
+	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
+	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
+	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
+	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
+	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
+	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
+	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA}
+	    };
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 0 indica CASILLA_VACIA, 1 indica FICHA_BLANCA y 2 indica FICHA_NEGRA
+// pone el tablero a cero y luego coloca las fichas centrales.
+void init_table(char tablero[][DIM], char candidatas[][DIM])
+{
+    int i, j;
+
+    for (i = 0; i < DIM; i++)
+    {
+        for (j = 0; j < DIM; j++)
+            tablero[i][j] = CASILLA_VACIA;
+    }
+    tablero[3][3] = FICHA_BLANCA;
+    tablero[4][4] = FICHA_BLANCA;
+    tablero[3][4] = FICHA_NEGRA;
+    tablero[4][3] = FICHA_NEGRA;
+
+    candidatas[3][3] = CASILLA_OCUPADA;
+    candidatas[4][4] = CASILLA_OCUPADA;
+    candidatas[3][4] = CASILLA_OCUPADA;
+    candidatas[4][3] = CASILLA_OCUPADA;
+
+    // casillas a explorar:
+    candidatas[2][2] = SI;
+    candidatas[2][3] = SI;
+    candidatas[2][4] = SI;
+    candidatas[2][5] = SI;
+    candidatas[3][2] = SI;
+    candidatas[3][5] = SI;
+    candidatas[4][2] = SI;
+    candidatas[4][5] = SI;
+    candidatas[5][2] = SI;
+    candidatas[5][3] = SI;
+    candidatas[5][4] = SI;
+    candidatas[5][5] = SI;
+}
+
+// Tabla de direcciones. Contiene los desplazamientos de las 8 direcciones posibles
+const char vSF[DIM] = {-1,-1, 0, 1, 1, 1, 0,-1};
+const char vSC[DIM] = { 0, 1, 1, 1, 0,-1,-1,-1};
+
+////////////////////////////////////////////////////////////////////////////////
+// comprueba si hay que actualizar alguna ficha
+// no comprueba que el movimiento realizado sea válido
+// f y c son la fila y columna a analizar
+// char vSF[DIM] = {-1,-1, 0, 1, 1, 1, 0,-1};
+// char vSC[DIM] = { 0, 1, 1, 1, 0,-1,-1,-1};
+int actualizar_tablero(char tablero[][DIM], char f, char c, char color)
+{
+    char SF, SC; // cantidades a sumar para movernos en la dirección que toque
+    int i, flip, patron;
+
+    for (i = 0; i < DIM; i++) // 0 es Norte, 1 NE, 2 E ...
+    {
+        SF = vSF[i];
+        SC = vSC[i];
+        // flip: numero de fichas a voltear
+        flip = 0;
+        patron = patron_volteo(tablero, &flip, f, c, SF, SC, color);
+        //printf("Flip: %d \n", flip);
+        if (patron == PATRON_ENCONTRADO )
+        {
+            voltear(tablero, f, c, SF, SC, flip, color);
+        }
+    }
+    return 0;
+}
+
+void test_tiempo(){
+	char __attribute__ ((aligned (8))) candidatas[DIM][DIM] =
+    {
+        {NO,NO,NO,NO,NO,NO,NO,NO},
+        {NO,NO,NO,NO,NO,NO,NO,NO},
+        {NO,NO,NO,NO,NO,NO,NO,NO},
+        {NO,NO,NO,NO,NO,NO,NO,NO},
+        {NO,NO,NO,NO,NO,NO,NO,NO},
+        {NO,NO,NO,NO,NO,NO,NO,NO},
+        {NO,NO,NO,NO,NO,NO,NO,NO},
+        {NO,NO,NO,NO,NO,NO,NO,NO}
+    };
+
+	init_table(tablero_tiempos, candidatas);
+	int longitud=0;
+	int flip=0;
+	//actualizar_tablero(tablero_tiempos,2,3,2);
+	int i=0;
+	while ( i<1000000 ){
+		flip=0;
+		patron_volteo(tablero_tiempos,&flip,2,3,-1,0,2);
+		i++;
+	}
+	int e=0;
+
 }

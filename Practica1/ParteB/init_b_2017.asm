@@ -32,8 +32,9 @@ Reset_Handler:
 #
         MOV     sp, #0x4000      /*  set up stack pointer (r13) */
 
-.extern     test_patron_volteo_arm
-        ldr         r5, = test_patron_volteo_arm
+.extern     test_tiempo
+.extern ficha_valida
+        ldr         r5, = test_tiempo
         mov         lr, pc
         bx          r5
 
@@ -53,6 +54,7 @@ stop:
 # r0 = result
 ################################################################################
 .equ DIM, 8
+.equ LOG2_DIM, 3 /* Debido a que DIM es potencia de 2 podemos evitar una multiplicaci�n */
 .equ CASILLA_VACIA, 0
 ficha_valida_arm:
 #  saves the working registers
@@ -61,15 +63,18 @@ ficha_valida_arm:
 # si ((f < DIM) && (0 <= f) && (c < DIM) && (0 <= c) && (tablero[f][c] != CASILLA_VACIA))
 # Al ser evaluacion cortocircuitada salto despues de cada comparacion
         cmp r1, #DIM  /* cmp f, DIM*/
-        bge		ficha_valida_arm_else /* salta si !(f < DIM)*/
-        cmp r1, #0 /* cmp f, #0 */
-        blt		ficha_valida_arm_else /* salta si !(0 <= f)*/
-        cmp r2, #DIM  /* cmp c, DIM*/
+        #bge		ficha_valida_arm_else /* salta si !(f < DIM)*/
+        cmplt r2, #DIM  /* cmp c, DIM*/
         bge		ficha_valida_arm_else /* salta si !(c < DIM)*/
-        cmp r2, #0 /* cmp c, #0 */
+
+        cmp r1, #0 /* cmp f, #0 */
+        #blt		ficha_valida_arm_else /* salta si !(0 <= f)*/
+        cmpge r2, #0 /* cmp c, #0 */
         blt ficha_valida_arm_else /* salta si !(0 <= c)*/
-        mov r4, #DIM
-        mla r4, r1, r4, r2 /*r4 ser� la posicion del vector([f][c]) con respecto a tablero -> *tablero[f][c] = r4 + *tablero */
+
+        #mov r4, #DIM
+        #mla r4, r1, r4, r2 /*r4 ser� la posicion del vector([f][c]) con respecto a tablero -> *tablero[f][c] = r4 + *tablero */
+        add r4, r2, r1, LSL #LOG2_DIM
         ldrb r0, [r0, r4] /*r0 = tablero[f][c] para en el caso de que entre al if ya tener el resultado*/
         cmp r0 , #CASILLA_VACIA /* cmp tablero[f][c], CASILLA_VACIA */
         beq ficha_valida_arm_else /* salta si (tablero[f][c] != CASILLA_VACIA)*/
@@ -103,50 +108,49 @@ ficha_valida_arm_return:
 ################################################################################
 ficha_valida_thumb:
 #  cambio de contexto a thumb
-        ADR r7, Tstart + 1 /* Processor starts in ARM state, */
-        BX r7 /* small ARM code header used to call Thumb main program. */
+	ADR r7, Tstart + 1 /* Processor starts in ARM state, */
+	BX r7 /* small ARM code header used to call Thumb main program. */
+	NOP
 
 .thumb
 Tstart:
-        MOV r7, #10 /* Set up parameters */
+	/* MOV r7, #10  Set up parameters */
 #  saves the working registers
-        PUSH {r1-r7}
+        PUSH {r4}
+
 # si ((f < DIM) && (0 <= f) && (c < DIM) && (0 <= c) && (tablero[f][c] != CASILLA_VACIA))
 # Al ser evaluacion cortocircuitada salto despues de cada comparacion
-        mov r5, #8 /*r5 = DIM*/
-        mov r4 , #0 /*r4 = 0 , como CASILLA_VACIA=0 entonces r4=CASILLA_VACIA*/
-        cmp r1, r5 /*(f < DIM)*/
+        cmp r1, #DIM  /* cmp f, DIM*/
         bge		ficha_validaElse_thumb
-        cmp r4, r1 /*(0 <= f)*/
-        bgt		ficha_validaElse_thumb
-        cmp r2, r5 /*(c < DIM)*/
-        bge		ficha_validaElse_thumb
-        cmp r4, r2 /*(0 <= c)*/
-        bgt 	ficha_validaElse_thumb
-        mul r1, r1, r5
+        cmp r1, #0 /* cmp f, #0 */
+        blt             ficha_validaElse_thumb /* salta si !(0 <= f)*/
+        cmp r2, #DIM  /* cmp c, DIM*/
+        bge             ficha_validaElse_thumb /* salta si !(c < DIM)*/
+        cmp r2, #0 /* cmp c, #0 */
+        blt ficha_validaElse_thumb /* salta si !(0 <= c)*/
+        mov r4, #DIM
+        mul r1, r1, r4
         add r1, r1, r2
 # Obtener r6 = tablero[f][c]
-        ldr r7, [r0, r1] /*r7 = tablero[f][c]*/
-        cmp r7 , r4 /*(tablero[f][c] != CASILLA_VACIA)*/
-        beq ficha_validaElse_thumb
+        ldrb r0, [r0, r1] /*r0 = tablero[f][c] para en el caso de que entre al if ya tener el resultado*/
+        cmp r0 , #CASILLA_VACIA /* cmp tablero[f][c], CASILLA_VACIA */
+        beq ficha_validaElse_thumb /* salta si (tablero[f][c] != CASILLA_VACIA)*/
 
 ficha_validaIf_thumb:
 # *posicion_valida = 1;
         mov r4, #1 /*r4=1*/
         str r4, [r3]
-# ficha = tablero[f][c];
-        mov r0, r7 /* result = tablero[f][c] */
         b ficha_valida_return_thumb
 
 ficha_validaElse_thumb:
 # *posicion_valida = 0;
-        str r4, [r3]
-        mov r0, r4 /* result = CASILLA_VACIA*/
+        mov r0, #0 /* r0 sera igual a CASILLA_VACIA */
+        str r0, [r3] /* *posicion_valida = 0 */
 
 ficha_valida_return_thumb:
-# restore the original registers
-        POP {r1-r7}
-# return to the instruccion that called the rutine and to arm mode
+        # restore the original registers
+        POP {r4}
+        # return to the instruccion that called the rutine and to arm mode
         BX      r14
 
 ################################################################################
@@ -173,12 +177,12 @@ ficha_valida_return_thumb:
 
 patron_volteo_arm:
 #  saves the working registers
-        STMFD   sp!, {fp}/* Guardo el frame pointer*/
-        add fp, sp , #4/* Coloco el frame pointer en posición para cargar los datos*/
-        STMFD   sp!, {r4-r11} /*Guardo los registros*/
+        #str fp, [sp,#-4]! /* Guardo el frame pointer*/
+        #add fp, sp , #4/* Coloco el frame pointer en posición para cargar los datos*/
+        #STMFD   sp!, {r4-r11} /*Guardo los registros*/
         #LDMFD   fp!, {r8-r10} /*Cargo los datos pasados por pila*/
-
-        #mov r8,#-1
+        STMFD   sp!, {r4-r10 ,fp,lr} /*Guardo los registros*/
+        add fp, sp , #36/* Coloco el frame pointer en posición para cargar los datos*/
 
         ldrsb r8,[fp],#4 /*LDMFD   fp!, {r4} */
         ldrsb r9,[fp],#4 /*LDMFD   fp!, {r5} */
@@ -207,13 +211,14 @@ patron_volteo_arm:
         sub sp,sp,#4 /* Reservo un entero en la pila para almacenar posicion_valida*/
         mov r3,sp
 /* Los registros del 0 al 3 ya están guardados en los registros 4-7 */
-        mov r11, lr /* Guardo el link register anterior */
+        #mov r11, lr /* Guardo el link register anterior */
 /* r11=lr */
 /*Como ya fp no se necesita se puede usar r12*/
-        ldr r12, = ficha_valida_arm
+        #ldr r12, = ficha_valida_arm
+        ldr r12, = ficha_valida_thumb
         mov lr, pc /* Guardo el pc */
         bx r12 /*para thumb usar bx y descomentar lo de arriba*/
-        mov lr, r11 /*Recupero el lr*/
+        #mov lr, r11 /*Recupero el lr*/
         LDMFD sp!, {r1} /*Recupero posicion_valida */
 /*
 * r0 = casilla
@@ -243,11 +248,11 @@ patron_volteo_arm_if:
         strb r9, [sp,#-4]! /*STMFD   sp!, {r4}*/
         strb r8, [sp,#-4]! /*STMFD   sp!, {r4}*/
 
-        mov r11, lr /* guardo lr */
+        #mov r11, lr /* guardo lr */
         ldr r12, = patron_volteo_arm /*para thumb usar bx y descomentar lo de arriba*/
         mov lr, pc
         bx r12
-        mov lr, r11 /*Recupero el lr*/
+        #mov lr, r11 /*Recupero el lr*/
         add sp, sp ,#12 /*Elimino los parametros de la pila*/
 # Fin lLamada a patronVolteo
 /*Patron = r0*/
@@ -263,10 +268,9 @@ patron_volteo_arm_else:
         mov r0, #NO_HAY_PATRON
 # restore the original registers
 patron_volteo_return:
-        LDMFD   sp!, {r4-r11}
-        LDMFD   sp!, {fp}
+        LDMFD   sp!, {r4-r10,fp,pc} /*Al volver se evita la siguiente instruccion*/
 # return to the instruccion that called the rutine and to arm mode
-        BX      r14
+        #BX      r14
 
 #################################################################################################################
 
