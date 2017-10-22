@@ -2,8 +2,8 @@
 #        ENTRY            		/*  mark the first instruction to call */
 .global	start
 .global ficha_valida_arm
-.global patron_volteo_arm
 .global ficha_valida_thumb
+.global patron_volteo_arm
 start:
 .arm /*indicates that we are using the ARM instruction set */
 #------standard initial code
@@ -32,9 +32,9 @@ Reset_Handler:
 #
         MOV     sp, #0x4000      /*  set up stack pointer (r13) */
 
-.extern     test_tiempo
+.extern test_patron_volteo_arm
 .extern ficha_valida
-        ldr         r5, = test_tiempo
+        ldr         r5, = test_patron_volteo_arm
         mov         lr, pc
         bx          r5
 
@@ -54,30 +54,33 @@ stop:
 # r0 = result
 ################################################################################
 .equ DIM, 8
-.equ LOG2_DIM, 3 /* Debido a que DIM es potencia de 2 podemos evitar una multiplicaci�n */
+.equ LOG2_DIM, 3 /* Debido a que DIM es potencia de 2 podemos evitar una multiplicaci�n */
 .equ CASILLA_VACIA, 0
+
 ficha_valida_arm:
 #  saves the working registers
         str r4, [sp,#-4]! /*STMFD   sp!, {r4}*/
 
 # si ((f < DIM) && (0 <= f) && (c < DIM) && (0 <= c) && (tablero[f][c] != CASILLA_VACIA))
-# Al ser evaluacion cortocircuitada salto despues de cada comparacion
+
         cmp r1, #DIM  /* cmp f, DIM*/
-        #bge		ficha_valida_arm_else /* salta si !(f < DIM)*/
-        cmplt r2, #DIM  /* cmp c, DIM*/
-        bge		ficha_valida_arm_else /* salta si !(c < DIM)*/
+        cmplo r2, #DIM  /* cmp c, DIM*/
 
-        cmp r1, #0 /* cmp f, #0 */
-        #blt		ficha_valida_arm_else /* salta si !(0 <= f)*/
-        cmpge r2, #0 /* cmp c, #0 */
-        blt ficha_valida_arm_else /* salta si !(0 <= c)*/
+#  Debido a que un numero negativo tiene el bit de mas peso a 1, si lo interpretamos
+#  sin signo obtendremos un número muy alto (siempre mayor a #DIM).
+#  Entonces nos podemos aprovechar de ello y comparar si
+#  ambos son mayores a #DIM e interpretar la comparación sin signo.
+#  Ademas en este caso, al pasarnos dos carácteres, la opción de comparar
+#  con #0 para ver si son menores sería más costosa, debido a que antes se
+#  tendría que extender el signo y ya despues proceder a la comparación.
 
-        #mov r4, #DIM
-        #mla r4, r1, r4, r2 /*r4 ser� la posicion del vector([f][c]) con respecto a tablero -> *tablero[f][c] = r4 + *tablero */
-        add r4, r2, r1, LSL #LOG2_DIM
+        bhs		ficha_valida_arm_else /* salta si !(c < DIM) o !(f < DIM) o (c<0) o (f<0)*/
+
+# Como #DIM es una potencia de 2, una multiplicacion por #DIM equivale a un desplazamiento de log2(#DIM) bits
+        add r4, r2, r1, LSL #LOG2_DIM /*r4 = posicion del vector([f][c]) con respecto a tablero -> *tablero[f][c] = r4 + *tablero */
         ldrb r0, [r0, r4] /*r0 = tablero[f][c] para en el caso de que entre al if ya tener el resultado*/
         cmp r0 , #CASILLA_VACIA /* cmp tablero[f][c], CASILLA_VACIA */
-        beq ficha_valida_arm_else /* salta si (tablero[f][c] != CASILLA_VACIA)*/
+        beq ficha_valida_arm_else /* entra si (tablero[f][c] != CASILLA_VACIA)*/
 
 ficha_valida_arm_if:
         mov r4, #1 /*r4=1*/
@@ -108,41 +111,48 @@ ficha_valida_arm_return:
 ################################################################################
 ficha_valida_thumb:
 #  cambio de contexto a thumb
-	ADR r7, Tstart + 1 /* Processor starts in ARM state, */
+#  saves the working registers
+	str r7, [sp,#-4]! /*STMFD   sp!, {r4}*/
+	ADR r7, ficha_valida_thumb_start + 1 /* Processor starts in ARM state, */
 	BX r7 /* small ARM code header used to call Thumb main program. */
 	NOP
 
 .thumb
-Tstart:
-	/* MOV r7, #10  Set up parameters */
+ficha_valida_thumb_start:
 #  saves the working registers
         PUSH {r4}
 
 # si ((f < DIM) && (0 <= f) && (c < DIM) && (0 <= c) && (tablero[f][c] != CASILLA_VACIA))
-# Al ser evaluacion cortocircuitada salto despues de cada comparacion
+
+#  Debido a que un numero negativo tiene el bit de mas peso a 1, si lo interpretamos
+#  sin signo obtendremos un número muy alto (siempre mayor a #DIM).
+#  Entonces nos podemos aprovechar de ello y comparar si
+#  ambos son mayores a #DIM e interpretar la comparación sin signo.
+#  Ademas en este caso, al pasarnos dos carácteres, la opción de comparar
+#  con #0 para ver si son menores sería más costosa, debido a que antes se
+#  tendría que extender el signo y ya despues proceder a la comparación.
+
         cmp r1, #DIM  /* cmp f, DIM*/
-        bge		ficha_validaElse_thumb
-        cmp r1, #0 /* cmp f, #0 */
-        blt             ficha_validaElse_thumb /* salta si !(0 <= f)*/
+        bhs ficha_valida_else_thumb
+
         cmp r2, #DIM  /* cmp c, DIM*/
-        bge             ficha_validaElse_thumb /* salta si !(c < DIM)*/
-        cmp r2, #0 /* cmp c, #0 */
-        blt ficha_validaElse_thumb /* salta si !(0 <= c)*/
+        bhs ficha_valida_else_thumb
+
         mov r4, #DIM
         mul r1, r1, r4
-        add r1, r1, r2
-# Obtener r6 = tablero[f][c]
+        add r1, r1, r2 /*r1 = posicion del vector([f][c]) con respecto a tablero -> *tablero[f][c] = r1 + *tablero */
+
         ldrb r0, [r0, r1] /*r0 = tablero[f][c] para en el caso de que entre al if ya tener el resultado*/
         cmp r0 , #CASILLA_VACIA /* cmp tablero[f][c], CASILLA_VACIA */
-        beq ficha_validaElse_thumb /* salta si (tablero[f][c] != CASILLA_VACIA)*/
+        beq ficha_valida_else_thumb /* entra si (tablero[f][c] != CASILLA_VACIA)*/
 
-ficha_validaIf_thumb:
+ficha_valida_if_thumb:
 # *posicion_valida = 1;
         mov r4, #1 /*r4=1*/
         str r4, [r3]
         b ficha_valida_return_thumb
 
-ficha_validaElse_thumb:
+ficha_valida_else_thumb:
 # *posicion_valida = 0;
         mov r0, #0 /* r0 sera igual a CASILLA_VACIA */
         str r0, [r3] /* *posicion_valida = 0 */
@@ -150,6 +160,7 @@ ficha_validaElse_thumb:
 ficha_valida_return_thumb:
         # restore the original registers
         POP {r4}
+        POP {r7}
         # return to the instruccion that called the rutine and to arm mode
         BX      r14
 
@@ -215,7 +226,7 @@ patron_volteo_arm:
 /* r11=lr */
 /*Como ya fp no se necesita se puede usar r12*/
         #ldr r12, = ficha_valida_arm
-        ldr r12, = ficha_valida_thumb
+        ldr r12, = ficha_valida_arm
         mov lr, pc /* Guardo el pc */
         bx r12 /*para thumb usar bx y descomentar lo de arriba*/
         #mov lr, r11 /*Recupero el lr*/
