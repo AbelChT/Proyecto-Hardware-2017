@@ -188,100 +188,101 @@ ficha_valida_return_thumb:
 
 patron_volteo_arm:
 #  saves the working registers
-        #str fp, [sp,#-4]! /* Guardo el frame pointer*/
-        #add fp, sp , #4/* Coloco el frame pointer en posición para cargar los datos*/
-        #STMFD   sp!, {r4-r11} /*Guardo los registros*/
-        #LDMFD   fp!, {r8-r10} /*Cargo los datos pasados por pila*/
-        STMFD   sp!, {r4-r10 ,fp,lr} /*Guardo los registros*/
-        add fp, sp , #36/* Coloco el frame pointer en posición para cargar los datos*/
+        STMFD   sp!, {r4-r10 ,fp,lr}
+        add fp, sp , #36
 
-        ldrsb r8,[fp],#4 /*LDMFD   fp!, {r4} */
-        ldrsb r9,[fp],#4 /*LDMFD   fp!, {r5} */
-        ldrsb r10,[fp],#4 /*LDMFD   fp!, {r6} */
-/*
-* r8 = char SF
-* r9 = char SC
-* r10 = char color
-*/
-# Codigo
-        add r6, r2, r8 /*  FA = FA + SF */
-        add r7, r3, r9 /*  CA = CA + SC */
+        ldrsb r8,[fp],#4 /* LDMFD   fp!, {r4} */
+        ldrsb r9,[fp],#4 /* LDMFD   fp!, {r5} */
+        ldrsb r10,[fp],#4 /* LDMFD   fp!, {r6} */
+
+# Estado del sistema
+# r8 = char SF
+# r9 = char SC
+# r10 = char color
+
+        add r6, r2, r8 /* FA = FA + SF */
+        add r7, r3, r9 /* CA = CA + SC */
         mov r4, r0 /* Guardo tablero */
         mov r5, r1 /* Guardo longitud */
-/*
-* r4 = char tablero[][DIM]
-* r5 = int *longitud
-* r6 = char FA
-* r7 = char CA
-*/
+
+# Estado del sistema
+# r4 = char tablero[][DIM]
+# r5 = int *longitud
+# r6 = char FA
+# r7 = char CA
+
 # LLamada a fichavalida
-/* Actualizo FA y CA para pasarlos*/
-        /* tablero lo paso como primer parametro*/
-        mov r1,r6 /* FA lo paso como segundo parametro*/
-        mov r2,r7 /* CA lo paso como tercer parametro*/
-        sub sp,sp,#4 /* Reservo un entero en la pila para almacenar posicion_valida*/
-        mov r3,sp
-/* Los registros del 0 al 3 ya están guardados en los registros 4-7 */
-        #mov r11, lr /* Guardo el link register anterior */
-/* r11=lr */
-/*Como ya fp no se necesita se puede usar r12*/
-        #ldr r12, = ficha_valida_arm
-        ldr r12, = ficha_valida_arm
+        mov r1, r6 /* FA lo paso como segundo parametro */
+        mov r2, r7 /* CA lo paso como tercer parametro */
+        sub sp, sp, #4 /* Reservo un entero en la pila para almacenar posicion_valida */
+        mov r3, sp /* paso *posicion_valida como último parámetro */
+
+        ldr r12, = ficha_valida_arm /* Como ya fp no se necesita se puede usar r12 */
         mov lr, pc /* Guardo el pc */
-        bx r12 /*para thumb usar bx y descomentar lo de arriba*/
-        #mov lr, r11 /*Recupero el lr*/
-        LDMFD sp!, {r1} /*Recupero posicion_valida */
-/*
-* r0 = casilla
-* r1 = posicion_valida
-*/
+        bx r12 /* Salto a la función */
+
+        ldr r1,[sp],#4 /*Recupero posicion_valida */
+
+# Estado del sistema
+# r0 = casilla
+# r1 = posicion_valida
+
 # Fin de llamada a fichavalida
-        cmp  r1, #1
-        bne patron_volteo_arm_else
-        cmp r0, r10
+# Se comprueba si se entra en el if, el else if o el else
+# if(posicion_valida == 1) && (casilla != color)
+# else if ((posicion_valida == 1) && (casilla == color))
+# else
+        cmp  r1, #1 /*cmp posicion_valida, #1*/
+        bne patron_volteo_arm_else /*si posicion valida es distinto de 1 siempre entra al else*/
+        cmp r0, r10 /*cmp casilla, color*/
+        /* En este punto posicion_valida == 1 , entonces si casilla == color
+         * entrata al else if y sino entrara al if  */
         beq patron_volteo_arm_else_if
 
 patron_volteo_arm_if:
-/* *longitud = *longitud + 1 y paso de parametros registro*/
         ldr r1, [r5] /* r1 = longitud */
         add r1, r1, #1
-        str r1, [r5]
-        /*tablero, longitud, FA, CA*/
-        mov r0, r4 /* Guardo tablero */
-        mov r1,r5
-        mov r2,r6 /* FA lo paso como tercer parametro*/
-        mov r3,r7 /* CA lo paso como cuarto parametro*/
+        str r1, [r5] /* longitud = longitud + 1 */
 
-# LLamada a patronVolteo
-/*No hace falta guardar los registros ya que no se van a usar*/
-        #STMFD sp!, {r8-r10} /*Paso los parametros correspondientes por la pila*/
+# LLamada a patron_volteo
+# Paso de parámetros patron_volteo por registro
+        mov r0, r4 /* Guardo tablero */
+        mov r1, r5 /* Paso la direccion de longitud como segundo parametro */
+        mov r2, r6 /* FA lo paso como tercer parametro */
+        mov r3, r7 /* CA lo paso como cuarto parametro */
+
+# No hace falta guardar los registros del 0 al 3 ya que no se van a usar
+
+# Paso los parametros correspondientes por la pila
         strb r10, [sp,#-4]! /*STMFD   sp!, {r4}*/
         strb r9, [sp,#-4]! /*STMFD   sp!, {r4}*/
         strb r8, [sp,#-4]! /*STMFD   sp!, {r4}*/
 
-        #mov r11, lr /* guardo lr */
-        ldr r12, = patron_volteo_arm /*para thumb usar bx y descomentar lo de arriba*/
-        mov lr, pc
+        ldr r12, = patron_volteo_arm /* Preparo la direccion a saltar */
+        mov lr, pc /* Guardo pc */
         bx r12
-        #mov lr, r11 /*Recupero el lr*/
+
+# Retorno patron volteo
         add sp, sp ,#12 /*Elimino los parametros de la pila*/
-# Fin lLamada a patronVolteo
-/*Patron = r0*/
+
+# Fin llamada a patron_volteo
+# En r0 se almacena el resultado de la última invocación
         b patron_volteo_return
 
 patron_volteo_arm_else_if:
         ldr r2, [r5] /* r2 = longitud */
-        cmp r2 , #0
-        movgt r0, #PATRON_ENCONTRADO
-        movle r0, #NO_HAY_PATRON
+        cmp r2 , #0 /* cmp longitud, #0*/
+        movgt r0, #PATRON_ENCONTRADO /* si la longitud es mayor a 0 se ha encontrado */
+        movle r0, #NO_HAY_PATRON /* si la longitud es menor o igual a 0 no */
         b patron_volteo_return
+
 patron_volteo_arm_else:
-        mov r0, #NO_HAY_PATRON
+        mov r0, #NO_HAY_PATRON /* no se ha encontrado patron */
+
 # restore the original registers
-patron_volteo_return:
-        LDMFD   sp!, {r4-r10,fp,pc} /*Al volver se evita la siguiente instruccion*/
 # return to the instruccion that called the rutine and to arm mode
-        #BX      r14
+patron_volteo_return:
+        LDMFD   sp!, {r4-r10,fp,pc} /* Se carga directamente pc para evitar una instruccion mas */
 
 #################################################################################################################
 
