@@ -58,8 +58,7 @@ stop:
 .equ CASILLA_VACIA, 0
 
 ficha_valida_arm:
-#  saves the working registers
-        str r4, [sp,#-4]! /*STMFD   sp!, {r4}*/
+# Al no usarse ningun registro adicional no hace falta salvar nada
 
 # si ((f < DIM) && (0 <= f) && (c < DIM) && (0 <= c) && (tablero[f][c] != CASILLA_VACIA))
 
@@ -77,14 +76,14 @@ ficha_valida_arm:
         bhs		ficha_valida_arm_else /* salta si !(c < DIM) o !(f < DIM) o (c<0) o (f<0)*/
 
 # Como #DIM es una potencia de 2, una multiplicacion por #DIM equivale a un desplazamiento de log2(#DIM) bits
-        add r4, r2, r1, LSL #LOG2_DIM /*r4 = posicion del vector([f][c]) con respecto a tablero -> *tablero[f][c] = r4 + *tablero */
-        ldrb r0, [r0, r4] /*r0 = tablero[f][c] para en el caso de que entre al if ya tener el resultado*/
+        add r1, r2, r1, LSL #LOG2_DIM /*r4 = posicion del vector([f][c]) con respecto a tablero -> *tablero[f][c] = r4 + *tablero */
+        ldrb r0, [r0, r1] /*r0 = tablero[f][c] para en el caso de que entre al if ya tener el resultado*/
         cmp r0 , #CASILLA_VACIA /* cmp tablero[f][c], CASILLA_VACIA */
         beq ficha_valida_arm_else /* entra si (tablero[f][c] != CASILLA_VACIA)*/
 
 ficha_valida_arm_if:
-        mov r4, #1 /*r4=1*/
-        str r4, [r3] /* *posicion_valida = 1 */
+        mov r1, #1 /*r1=1*/
+        str r1, [r3] /* *posicion_valida = 1 */
         b ficha_valida_arm_return /* r0 sera igual a tablero[f][c] */
 
 ficha_valida_arm_else:
@@ -92,8 +91,6 @@ ficha_valida_arm_else:
         str r0, [r3] /* *posicion_valida = 0 */
 
 ficha_valida_arm_return:
-        # restore the original registers
-        ldr r4,[sp],#4 /*LDMFD   sp!, {r4} */
         # return to the instruccion that called the rutine and to arm mode
         BX      r14
 
@@ -137,8 +134,7 @@ ficha_valida_thumb_start:
         cmp r2, #DIM  /* cmp c, DIM*/
         bhs ficha_valida_else_thumb
 
-        mov r4, #DIM
-        mul r1, r1, r4
+        lsl r1, r1, #LOG2_DIM
         add r1, r1, r2 /*r1 = posicion del vector([f][c]) con respecto a tablero -> *tablero[f][c] = r1 + *tablero */
 
         ldrb r0, [r0, r1] /*r0 = tablero[f][c] para en el caso de que entre al if ya tener el resultado*/
@@ -147,8 +143,8 @@ ficha_valida_thumb_start:
 
 ficha_valida_if_thumb:
 # *posicion_valida = 1;
-        mov r4, #1 /*r4=1*/
-        str r4, [r3]
+        mov r1, #1 /*r1=1*/
+        str r1, [r3]
         b ficha_valida_return_thumb
 
 ficha_valida_else_thumb:
@@ -158,7 +154,7 @@ ficha_valida_else_thumb:
 
 ficha_valida_return_thumb:
         # restore the original registers
-        POP {r4}
+        POP {r4} /* Se restaura el registro usado para saltar*/
         # return to the instruccion that called the rutine and to arm mode
         BX      r14
 
