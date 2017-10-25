@@ -33,7 +33,7 @@ Reset_Handler:
         MOV     sp, #0x4000      /*  set up stack pointer (r13) */
 
 .extern test_patron_volteo_arm
-.extern ficha_valida
+.extern ficha_valida_a_usar /* En este puntero a funci�n se almacena el fichavalida que hay que usar*/
         ldr         r5, = test_patron_volteo_arm
         mov         lr, pc
         bx          r5
@@ -112,15 +112,14 @@ ficha_valida_arm_return:
 ficha_valida_thumb:
 #  cambio de contexto a thumb
 #  saves the working registers
-	str r7, [sp,#-4]! /*STMFD   sp!, {r4}*/
-	ADR r7, ficha_valida_thumb_start + 1 /* Processor starts in ARM state, */
-	BX r7 /* small ARM code header used to call Thumb main program. */
+	str r4, [sp,#-4]! /*STMFD   sp!, {r4}*/
+	ADR r4, ficha_valida_thumb_start + 1 /* Processor starts in ARM state, */
+	BX r4 /* small ARM code header used to call Thumb main program. */
+	# La restauracion del registro se hace en ficha_valida_return_thumb
 	NOP
 
 .thumb
 ficha_valida_thumb_start:
-#  saves the working registers
-        PUSH {r4}
 
 # si ((f < DIM) && (0 <= f) && (c < DIM) && (0 <= c) && (tablero[f][c] != CASILLA_VACIA))
 
@@ -160,7 +159,6 @@ ficha_valida_else_thumb:
 ficha_valida_return_thumb:
         # restore the original registers
         POP {r4}
-        POP {r7}
         # return to the instruccion that called the rutine and to arm mode
         BX      r14
 
@@ -191,15 +189,15 @@ patron_volteo_arm:
         STMFD   sp!, {r4-r10 ,fp,lr}
         add fp, sp , #36
 
-        ldrsb r8,[fp],#4 /* LDMFD   fp!, {r4} */
-        ldrsb r9,[fp],#4 /* LDMFD   fp!, {r5} */
-        ldrsb r10,[fp],#4 /* LDMFD   fp!, {r6} */
+		# Se cargan bytes para respetar que son 3 caracteres
+        ldrb r8,[fp],#4 /* LDMFD   fp!, {r4} */
+        ldrb r9,[fp],#4 /* LDMFD   fp!, {r5} */
+        ldrb r10,[fp],#4 /* LDMFD   fp!, {r6} */
 
 # Estado del sistema
 # r8 = char SF
 # r9 = char SC
 # r10 = char color
-
         add r6, r2, r8 /* FA = FA + SF */
         add r7, r3, r9 /* CA = CA + SC */
         mov r4, r0 /* Guardo tablero */
@@ -212,12 +210,14 @@ patron_volteo_arm:
 # r7 = char CA
 
 # LLamada a fichavalida
-        mov r1, r6 /* FA lo paso como segundo parametro */
-        mov r2, r7 /* CA lo paso como tercer parametro */
+        and r1, r6, #0xff /* FA lo paso como segundo parametro, para respetar que es un byte se hace el cast */
+        and r2, r7, #0xff /* CA lo paso como tercer parametro, para respetar que es un byte se hace el cast */
         sub sp, sp, #4 /* Reservo un entero en la pila para almacenar posicion_valida */
-        mov r3, sp /* paso *posicion_valida como último parámetro */
+        mov r3, sp /* paso *posicion_valida como ultimo parametro */
 
-        ldr r12, = ficha_valida_arm /* Como ya fp no se necesita se puede usar r12 */
+		# Cargamos el ficha valida a usar en este caso
+        ldr r12, = ficha_valida_a_usar /* Como ya fp no se necesita se puede usar r12 */
+        ldr r12, [r12]
         mov lr, pc /* Guardo el pc */
         bx r12 /* Salto a la función */
 
@@ -229,9 +229,9 @@ patron_volteo_arm:
 
 # Fin de llamada a fichavalida
 # Se comprueba si se entra en el if, el else if o el else
-# if(posicion_valida == 1) && (casilla != color)
-# else if ((posicion_valida == 1) && (casilla == color))
-# else
+# si(posicion_valida == 1) && (casilla != color)
+# sino si ((posicion_valida == 1) && (casilla == color))
+# sino
         cmp  r1, #1 /*cmp posicion_valida, #1*/
         bne patron_volteo_arm_else /*si posicion valida es distinto de 1 siempre entra al else*/
         cmp r0, r10 /*cmp casilla, color*/
@@ -248,8 +248,8 @@ patron_volteo_arm_if:
 # Paso de parámetros patron_volteo por registro
         mov r0, r4 /* Guardo tablero */
         mov r1, r5 /* Paso la direccion de longitud como segundo parametro */
-        mov r2, r6 /* FA lo paso como tercer parametro */
-        mov r3, r7 /* CA lo paso como cuarto parametro */
+        and r2, r6, #0xff /* FA lo paso como tercer parametro, para respetar que es un byte se hace el cast */
+        and r3, r7, #0xff /* CA lo paso como cuarto parametro, para respetar que es un byte se hace el cast */
 
 # No hace falta guardar los registros del 0 al 3 ya que no se van a usar
 

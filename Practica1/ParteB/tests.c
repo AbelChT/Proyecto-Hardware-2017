@@ -1,35 +1,26 @@
 /*
- * Test_ARM_ficha_valida.c
- *
- *  Created on: 30/09/2017
- *      Author: Abel
- */
-// Tamaï¿½o del tablero
-
-
+* Fichero de pruebas
+*/
 #define DIM   8
-
-// Valores que puede devolver la funciï¿½n patron_volteo())
 #define PATRON_ENCONTRADO    1
 #define NO_HAY_PATRON        0
-
-// Estados de las casillas del tablero
 #define CASILLA_VACIA 0
 #define FICHA_BLANCA  1
 #define FICHA_NEGRA   2
-
-// candidatas: indica las posiciones a explorar
-// Se usa para no explorar todo el tablero innecesariamente
-// Sus posibles valores son NO, SI, CASILLA_OCUPADA
 #define NO               0
 #define SI               1
 #define CASILLA_OCUPADA  2
 
+// Funciones ARM
 extern char ficha_valida_arm(char tablero[][DIM], char f, char c, int *posicion_valida);
 extern char ficha_valida_thumb(char tablero[][DIM], char f, char c, int *posicion_valida);
 extern int patron_volteo_arm(char tablero[][DIM], int *longitud, char FA, char CA, char SF, char SC, char color);
 
-char __attribute__ ((aligned (8))) tablero[DIM][DIM] = {
+// Los siguientes punteros a funciones se utilizan para lograr hacer las pruebas automï¿½ticas de las 6 combinaciones
+char (*ficha_valida_a_usar)(char tablero[][DIM], char f, char c, int *posicion_valida);
+int (*patron_volteo_a_usar)(char tablero[][DIM], int *longitud, char FA, char CA, char SF, char SC, char color);
+
+static char __attribute__ ((aligned (8))) tablero[DIM][DIM] = {
 	        {3,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
 	        {CASILLA_VACIA,CASILLA_VACIA,7,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
 	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
@@ -39,6 +30,8 @@ char __attribute__ ((aligned (8))) tablero[DIM][DIM] = {
 	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
 	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,17}
 };
+
+/* FunciÃ³n ficha valida original */
 char ficha_valida(char tablero[][DIM], char f, char c, int *posicion_valida)
 {
     char ficha;
@@ -56,14 +49,7 @@ char ficha_valida(char tablero[][DIM], char f, char c, int *posicion_valida)
     return ficha;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// La funciï¿½n patrï¿½n volteo es una funciï¿½n recursiva que busca el patrï¿½n de volteo
-// (n fichas del rival seguidas de una ficha del jugador actual) en una direcciï¿½n determinada
-// SF y SC son las cantidades a sumar para movernos en la direcciï¿½n que toque
-// color indica el color de la pieza que se acaba de colocar
-// la funciï¿½n devuelve PATRON_ENCONTRADO (1) si encuentra patrï¿½n y NO_HAY_PATRON (0) en caso contrario
-// FA y CA son la fila y columna a analizar
-// longitud es un parï¿½metro por referencia. Sirve para saber la longitud del patrï¿½n que se estï¿½ analizando. Se usa para saber cuantas fichas habrï¿½a que voltear
+/* FunciÃ³n patrÃ³n volteo original */
 int patron_volteo(char tablero[][DIM], int *longitud, char FA, char CA, char SF, char SC, char color)
 {
     int posicion_valida; // indica si la posiciï¿½n es valida y contiene una ficha de algï¿½n jugador
@@ -71,7 +57,7 @@ int patron_volteo(char tablero[][DIM], int *longitud, char FA, char CA, char SF,
     char casilla;   // casilla es la casilla que se lee del tablero
     FA = FA + SF;
     CA = CA + SC;
-    casilla = ficha_valida(tablero, FA, CA, &posicion_valida);
+    casilla = (*ficha_valida_a_usar)(tablero, FA, CA, &posicion_valida);
     // mientras la casilla estï¿½ en el tablero, no estï¿½ vacï¿½a,
     // y es del color rival seguimos buscando el patron de volteo
     if ((posicion_valida == 1) && (casilla != color))
@@ -104,25 +90,8 @@ int patron_volteo(char tablero[][DIM], int *longitud, char FA, char CA, char SF,
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// voltea n fichas en la dirección que toque
-// SF y SC son las cantidades a sumar para movernos en la dirección que toque
-// color indica el color de la pieza que se acaba de colocar
-// FA y CA son la fila y columna a analizar
-void voltear(char tablero[][DIM], char FA, char CA, char SF, char SC, int n, char color)
-{
-    int i;
-
-    for (i = 0; i < n; i++)
-    {
-        FA = FA + SF;
-        CA = CA + SC;
-        tablero[FA][CA] = color;
-    }
-}
-
 /*
- * Mejorar
+ * Testea el correcto funcionamiento de ficha_valida
  */
 void test_ficha_valida_arm()
 {
@@ -178,7 +147,8 @@ void test_ficha_valida_arm()
 		}
 		i++;
 	}
-	int j=10;
+
+	int j=10; // Colocar un breackpoint para conocer si ha fallado alguna prueba
 
 }
 
@@ -223,7 +193,10 @@ void test_patron_volteo_arm()
 	};
 
     char SF, SC; // cantidades a sumar para movernos en la direcciï¿½n que toque
-    int i,j, flipC, flipT, patronC, patronT, pruebas,PrimerFallo;
+    int i, j, pruebas, PrimerFallo;
+    int flip_C_C, flip_C_ARM, flip_C_THUMB, flip_ARM_C, flip_ARM_ARM, flip_ARM_THUMB,
+    patron_C_C, patron_C_ARM, patron_C_THUMB, patron_ARM_C, patron_ARM_ARM, patron_ARM_THUMB;
+
     pruebas=3;
     PrimerFallo=0;
     j=0;
@@ -234,12 +207,48 @@ void test_patron_volteo_arm()
 			SF = vSF[i];
 			SC = vSC[i];
 			// flip: numero de fichas a voltear
-			flipC = 0; flipT = 0;
-			patronC = patron_volteo(tableros[j], &flipC, cases[j][0],cases[j][1], SF, SC, cases[j][2]);
-			patronT = patron_volteo_arm(tableros[j], &flipT, cases[j][0],cases[j][1], SF, SC, cases[j][2]); //patron_volteo_arm
+			flip_C_C = 0;
+			flip_C_ARM = 0;
+			flip_C_THUMB = 0;
+			flip_ARM_C = 0;
+			flip_ARM_ARM = 0;
+			flip_ARM_THUMB = 0;
+
+			// Pruebas C-C
+			ficha_valida_a_usar = &ficha_valida;
+			patron_volteo_a_usar = &patron_volteo;
+			patron_C_C = (*patron_volteo_a_usar)(tableros[j], &flip_C_C, cases[j][0],cases[j][1], SF, SC, cases[j][2]);
+
+      // Pruebas C-ARM
+      ficha_valida_a_usar = &ficha_valida_arm;
+			patron_volteo_a_usar = &patron_volteo;
+			patron_C_ARM = (*patron_volteo_a_usar)(tableros[j], &flip_C_ARM, cases[j][0],cases[j][1], SF, SC, cases[j][2]);
+
+      // Pruebas C-THUMB
+      ficha_valida_a_usar = &ficha_valida_thumb;
+			patron_volteo_a_usar = &patron_volteo;
+			patron_C_THUMB = (*patron_volteo_a_usar)(tableros[j], &flip_C_THUMB, cases[j][0],cases[j][1], SF, SC, cases[j][2]);
+
+      // Pruebas ARM-C
+      ficha_valida_a_usar = &ficha_valida;
+			patron_volteo_a_usar = &patron_volteo_arm;
+			patron_ARM_C = (*patron_volteo_a_usar)(tableros[j], &flip_ARM_C, cases[j][0],cases[j][1], SF, SC, cases[j][2]);
+
+      // Pruebas ARM-ARM
+      ficha_valida_a_usar = &ficha_valida_arm;
+			patron_volteo_a_usar = &patron_volteo_arm;
+			patron_ARM_ARM = (*patron_volteo_a_usar)(tableros[j], &flip_ARM_ARM, cases[j][0],cases[j][1], SF, SC, cases[j][2]);
+
+      ficha_valida_a_usar = &ficha_valida_thumb;
+			patron_volteo_a_usar = &patron_volteo_arm;
+			patron_ARM_THUMB = (*patron_volteo_a_usar)(tableros[j], &flip_ARM_THUMB, cases[j][0],cases[j][1], SF, SC, cases[j][2]);
+
+
 			//printf("Flip: %d \n", flip);
 
-			if (patronC != patronT || flipC != flipT){
+			if (patron_C_C != patron_C_ARM || patron_C_C != patron_C_THUMB || patron_C_C != patron_ARM_C || patron_C_C != patron_ARM_ARM || patron_C_C != patron_ARM_THUMB  ||
+         flip_C_C != flip_C_ARM || flip_C_C != flip_C_THUMB || flip_C_C != flip_ARM_C || flip_C_C != flip_ARM_ARM || flip_C_C != flip_ARM_THUMB){
+
 				PrimerFallo=j+1;
 				break;
 			}
@@ -247,9 +256,10 @@ void test_patron_volteo_arm()
 		}
 		j++;
     }
+    // Colocar un breackpoint para conocer si ha fallado alguna prueba
 }
 
-char __attribute__ ((aligned (8))) tablero_tiempos[DIM][DIM] = {
+static char __attribute__ ((aligned (8))) tablero_tiempos[DIM][DIM] = {
 	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
 	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
 	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
@@ -297,38 +307,10 @@ void init_table(char tablero[][DIM], char candidatas[][DIM])
     candidatas[5][5] = SI;
 }
 
-// Tabla de direcciones. Contiene los desplazamientos de las 8 direcciones posibles
-const char vSF[DIM] = {-1,-1, 0, 1, 1, 1, 0,-1};
-const char vSC[DIM] = { 0, 1, 1, 1, 0,-1,-1,-1};
-
-////////////////////////////////////////////////////////////////////////////////
-// comprueba si hay que actualizar alguna ficha
-// no comprueba que el movimiento realizado sea válido
-// f y c son la fila y columna a analizar
-// char vSF[DIM] = {-1,-1, 0, 1, 1, 1, 0,-1};
-// char vSC[DIM] = { 0, 1, 1, 1, 0,-1,-1,-1};
-int actualizar_tablero(char tablero[][DIM], char f, char c, char color)
-{
-    char SF, SC; // cantidades a sumar para movernos en la dirección que toque
-    int i, flip, patron;
-
-    for (i = 0; i < DIM; i++) // 0 es Norte, 1 NE, 2 E ...
-    {
-        SF = vSF[i];
-        SC = vSC[i];
-        // flip: numero de fichas a voltear
-        flip = 0;
-        patron = patron_volteo(tablero, &flip, f, c, SF, SC, color);
-        //printf("Flip: %d \n", flip);
-        if (patron == PATRON_ENCONTRADO )
-        {
-            voltear(tablero, f, c, SF, SC, flip, color);
-        }
-    }
-    return 0;
-}
-
 void test_tiempo(){
+	ficha_valida_a_usar = &ficha_valida;
+	patron_volteo_a_usar = &patron_volteo;
+
 	char __attribute__ ((aligned (8))) candidatas[DIM][DIM] =
     {
         {NO,NO,NO,NO,NO,NO,NO,NO},
@@ -344,11 +326,10 @@ void test_tiempo(){
 	init_table(tablero_tiempos, candidatas);
 	int longitud=0;
 	int flip=0;
-	//actualizar_tablero(tablero_tiempos,2,3,2);
 	int i=0;
 	while ( i<1000000 ){
 		flip=0;
-		patron_volteo(tablero_tiempos,&flip,2,3,-1,0,2);
+		(*patron_volteo_a_usar)(tablero_tiempos,&flip,2,3,-1,0,2);
 		i++;
 	}
 	int e=0;
