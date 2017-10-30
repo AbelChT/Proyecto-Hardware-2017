@@ -47,14 +47,14 @@ void timer2_inicializar(void)
 	/* iniciar timer (bit 0) con auto-reload (bit 3)*/
 	//rTCON = 0x09;
   // Lo hago de vez para evitar posible error
-  rTCON = (0x1 << 13) | (0x1 << 15)
+  rTCON = (0x1 << 13) | (0x1 << 15);
 
   timer2_num_int = 0;
 }
 void timer2_empezar(void){
   /* Configura el Timer0 */
   rTCNTB2 = 3200000;// valor inicial de cuenta (la cuenta es descendente)
-  rTCON = (0x1 << 13) | (0x1 << 15)
+  rTCON = (0x1 << 13) | (0x1 << 15);
   timer2_num_int = 0;
 }
 
@@ -63,5 +63,6 @@ int timer2_leer(void){
   timer_actual = timer_actual + ( 3200000 - rTCNTB2 ) / 16000;
   /* Si durante la operación ha cambiado timer2_num_int, implica que se ha terminado
      la cuenta y que se ha activado la subrutina */
-  return timer2_num_int > timer_actual : timer2_num_int ? timer_actual;
+  if(timer2_num_int > timer_actual) return timer2_num_int;
+  else return timer_actual;
 }
