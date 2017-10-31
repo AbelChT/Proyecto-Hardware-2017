@@ -21,7 +21,7 @@ void timer2_ISR(void) __attribute__((interrupt("IRQ")));
 void timer2_ISR(void)
 {
   // Hacer lo que sea
-  timer2_num_int = timer2_num_int + 100;
+  timer2_num_int = timer2_num_int + 1;
 
 	/* borrar bit en I_ISPC para desactivar la solicitud de interrupci�n*/
 	rI_ISPC |= BIT_TIMER2; // BIT_TIMER2 est� definido en 44b.h y pone un uno en el bit 13 que correponde al Timer2
@@ -40,29 +40,43 @@ void timer2_inicializar(void)
 	/* Configura el Timer0 */
 	rTCFG0 = 0x0; // factor de preescalado minimo, para aumentar la precisión
 	rTCFG1 = 0x0; // selecciona la entrada del mux que proporciona el reloj. La 00 corresponde a un divisor de 1/2.
-	rTCNTB2 = 3200000;// valor inicial de cuenta (la cuenta es descendente)
-	rTCMPB2 = 1600000;// valor de comparaci�n
+	rTCNTB2 = 65535;// valor inicial de cuenta (la cuenta es descendente)
+	rTCMPB2 = 12800;// valor de comparaci�n
 	/* establecer update=manual (bit 1) + inverter=on (�? ser� inverter off un cero en el bit 2 pone el inverter en off)*/
 	//rTCON = 0x2;
 	/* iniciar timer (bit 0) con auto-reload (bit 3)*/
 	//rTCON = 0x09;
   // Lo hago de vez para evitar posible error
-  rTCON = (0x1 << 13) | (0x1 << 15);
+  //rTCON = (0x1 << 13) | (0x1 << 15);
+	//rTCON = (0x1 << 13);
+	//rTCON = (0x1 << 15);
+	rTCON =   0x2000;
+	/* iniciar timer (bit 0) con auto-reload (bit 3)*/
+
+	rTCON =  0x9000 ;
 
   timer2_num_int = 0;
 }
 void timer2_empezar(void){
+
+	rTCNTB2 = 65535;// valor inicial de cuenta (la cuenta es descendente)
+
+
   /* Configura el Timer0 */
-  rTCNTB2 = 3200000;// valor inicial de cuenta (la cuenta es descendente)
-  rTCON = (0x1 << 13) | (0x1 << 15);
-  timer2_num_int = 0;
+	rTCON =   0x2000;
+	/* iniciar timer (bit 0) con auto-reload (bit 3)*/
+
+	rTCON =  0x9000 ;
+	timer2_num_int=0;
 }
 
 int timer2_leer(void){
-  int timer_actual = timer2_num_int;
-  timer_actual = timer_actual + ( 3200000 - rTCNTB2 ) / 16000;
+  int timer_actual = timer2_num_int * 65535;
+  timer_actual = timer_actual + (65535 - rTCNTB2 );
   /* Si durante la operación ha cambiado timer2_num_int, implica que se ha terminado
      la cuenta y que se ha activado la subrutina */
-  if(timer2_num_int > timer_actual) return timer2_num_int;
-  else return timer_actual;
+  if(timer2_num_int * 65535 > timer_actual) return (timer2_num_int * 65535)/32;
+  else return timer_actual/32;
+  //return timer_actual;
+  //return timer2_num_int;
 }
