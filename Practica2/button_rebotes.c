@@ -74,7 +74,7 @@ void Eint4567_init(void)
 	rEXTINTPND = 0xf;
 
   // inicializa el timer que se encargará de gestionar los rebotes
-  timer3_init();
+  timer3_inicializar();
 }
 
 void maquina_de_estados_gestor_rebotes(void){
