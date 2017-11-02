@@ -38,8 +38,8 @@ void timer2_inicializar(void)
 	pISR_TIMER2 = (unsigned) timer2_ISR;
 
 	/* Configura el Timer0 */
-	rTCFG0 = 0x0; // factor de preescalado minimo, para aumentar la precisión
-	rTCFG1 = 0x0; // selecciona la entrada del mux que proporciona el reloj. La 00 corresponde a un divisor de 1/2.
+	rTCFG0 = rTCFG0 & ~(0xff00); // factor de preescalado minimo, para aumentar la precisión
+	rTCFG1 = rTCFG1 & ~(0xf00); // selecciona la entrada del mux que proporciona el reloj. La 00 corresponde a un divisor de 1/2.
 	rTCNTB2 = 65535;// valor inicial de cuenta (la cuenta es descendente)
 	rTCMPB2 = 12800;// valor de comparaci�n
 	/* establecer update=manual (bit 1) + inverter=on (�? ser� inverter off un cero en el bit 2 pone el inverter en off)*/

@@ -20,7 +20,7 @@ typedef enum {NO_PULSADO, MANTENIDO, REBOTES_INICIALES, REBOTES_FINALES} estados
   Cuando se pulsa un bot�n sumamos y con el otro restamos. �A veces hay rebotes! */
 static unsigned int int_count = 0;
 
-static estados_boton estado_botones = NO_PULSADO;
+estados_boton estado_botones = NO_PULSADO;
 
 /* declaraci�n de funci�n que es rutina de servicio de interrupci�n
  * https://gcc.gnu.org/onlinedocs/gcc/ARM-Function-Attributes.html */
@@ -45,7 +45,12 @@ void Eint4567_ISR(void)
 	}
 
   // Se llama a gestorRebotes
-  maquina_de_estados_gestor_rebotes();
+  	  rINTMSK    = rINTMSK & ( BIT_EINT4567 );
+      estado_botones = REBOTES_INICIALES;
+       rTCNTB1 = 1562;// el timer saltara a los 0,2 s
+
+  	   rTCON =   0x200; 
+       rTCON =  0x900 ;
 
 	/* Finalizar ISR */
 	rEXTINTPND = 0xf;				// borra los bits en EXTINTPND
@@ -77,6 +82,7 @@ void Eint4567_init(void)
   timer3_inicializar();
 }
 
+/*
 void maquina_de_estados_gestor_rebotes(void){
   switch (estado_botones) {
     case NO_PULSADO:
@@ -104,4 +110,4 @@ void maquina_de_estados_gestor_rebotes(void){
 
   }
 
-}
+}*/
