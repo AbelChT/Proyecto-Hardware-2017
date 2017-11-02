@@ -30,7 +30,7 @@ void timer1_ISR(void)
       break;
 
     case MANTENIDO:
-    	if( se ha soltado){
+    	if((rPDATG & ~(0x1 << 6)) == 0 || (rPDATG & ~(0x1 << 6)) == 0 ){ // leer el bit adecuado de rPDATG
     		estado_botones = REBOTES_FINALES;
     		rTCNTB1 = 1562;// el timer saltara a los 0,2 s
 
