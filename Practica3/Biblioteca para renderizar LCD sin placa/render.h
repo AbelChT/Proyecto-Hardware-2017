@@ -1,0 +1,10 @@
+//
+// Created by abel on 15/12/17.
+//
+
+#ifndef PROYECTOHARWAREPANTALLARENDER_RENDER_H
+#define PROYECTOHARWAREPANTALLARENDER_RENDER_H
+
+void render(unsigned int pantalla[320][240]);
+
+#endif //PROYECTOHARWAREPANTALLARENDER_RENDER_H
