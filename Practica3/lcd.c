@@ -44,11 +44,11 @@ void Lcd_Init(void)
 	rLCDCON1=(1)|(1<<5)|(MVAL_USED<<7)|(0x3<<8)|(0x3<<10)|(CLKVAL_GREY16<<12);
 	rBLUELUT=0xfa40;
 	//Enable LCD Logic and EL back-light.
-	rPDATE=rPDATE&0x0e;
+	rPDATE=0x0e;
 	
 	//DMA ISR
-	rINTMSK &= ~(BIT_GLOBAL|BIT_ZDMA0);
     pISR_ZDMA0=(int)Zdma0Done;
+    rINTMSK &= ~(BIT_GLOBAL|BIT_ZDMA0);
 }
 
 /*********************************************************************************************
@@ -420,10 +420,13 @@ void ReverseLine(INT32U ulHeight, INT32U ulY)
 * modify:
 * comment:		
 *********************************************************************************************/
-static INT8U ucZdma0Done=1;	//When DMA is finish,ucZdma0Done is cleared to Zero
+volatile static INT8U ucZdma0Done=1;	//When DMA is finish,ucZdma0Done is cleared to Zero
+
+
+void Zdma0Done(void) __attribute__((interrupt("IRQ")));
 void Zdma0Done(void)
 {
-	rI_ISPC=BIT_ZDMA0;	    //clear pending
+	rI_ISPC|=BIT_ZDMA0;	    //clear pending
 	ucZdma0Done=0;
 }
 
@@ -437,8 +440,6 @@ void Zdma0Done(void)
 *********************************************************************************************/
 void Lcd_Dma_Trans(void)
 {
-	INT8U err;
-	
 	ucZdma0Done=1;
 	rNCACHBE1=(((unsigned)(LCD_ACTIVE_BUFFER)>>12) <<16 )|((unsigned)(LCD_VIRTUAL_BUFFER)>>12);
   	rZDISRC0=(DW<<30)|(1<<28)|LCD_VIRTUAL_BUFFER; // inc
@@ -464,17 +465,142 @@ void Lcd_Dma_Trans(void)
 * modify:
 * comment:		
 *********************************************************************************************/
-void Lcd_Draw_Disks(INT16 usX0, INT16 usY0, INT16 ancho, INT8U ucColor)
+void diskPoints(INT16 cx, INT16 cy, INT16 x, INT16 y, INT8U ucColor)
 {
-	INT16 x = ancho;
-	while((x) >= 0){
-		INT16  y = ancho;
-		while((y) >= 0){
-			//Hacer funcion circulo
+    if (x == 0) {
+        LCD_PutPixel(cx, cy + y, ucColor);
+        LCD_PutPixel(cx, cy - y, ucColor);
+        LCD_PutPixel( cx + y, cy, ucColor);
+        LCD_PutPixel( cx - y, cy, ucColor);
+        INT16 i;
+        for (i = 0; i < y; i++){
+            LCD_PutPixel(cx, cy + i, ucColor);
+            LCD_PutPixel(cx, cy - i, ucColor);
+        }
+    } else if (x == y) {
+        LCD_PutPixel(cx + x, cy + y, ucColor);
+        LCD_PutPixel(cx - x, cy + y, ucColor);
+        LCD_PutPixel(cx + x, cy - y, ucColor);
+        LCD_PutPixel( cx - x, cy - y, ucColor);
+
+        INT16 i;
+        for (i = 0; i < y; i++){
+            LCD_PutPixel(cx + x, cy + i, ucColor);
+            LCD_PutPixel(cx - x, cy - i, ucColor);
+
+            LCD_PutPixel(cx - x, cy + i, ucColor);
+            LCD_PutPixel(cx + x, cy - i, ucColor);
+        }
+
+    } else if (x < y) {
+        LCD_PutPixel( cx + x, cy + y, ucColor);
+        LCD_PutPixel( cx - x, cy + y, ucColor);
+        LCD_PutPixel( cx + x, cy - y, ucColor);
+        LCD_PutPixel( cx - x, cy - y, ucColor);
+        LCD_PutPixel( cx + y, cy + x, ucColor);
+        LCD_PutPixel( cx - y, cy + x, ucColor);
+        LCD_PutPixel( cx + y, cy - x, ucColor);
+        LCD_PutPixel(cx - y, cy - x, ucColor);
+
+        INT16 i;
+        for (i = 0; i < y; ++i){
+            LCD_PutPixel(cx + x, cy + i, ucColor);
+            LCD_PutPixel(cx - x, cy - i, ucColor);
+
+            LCD_PutPixel(cx - x, cy + i, ucColor);
+            LCD_PutPixel(cx + x, cy - i, ucColor);
+        }
+
+        for (i = 0; i < x; ++i) {
+            LCD_PutPixel(cx + y, cy + i, ucColor);
+             LCD_PutPixel(cx - y, cy - i, ucColor);
+
+             LCD_PutPixel(cx - y, cy + i, ucColor);
+             LCD_PutPixel(cx + y, cy - i, ucColor);
+        }
+    }
+}
+
+
+void Lcd_Draw_Disks(INT16 usX0, INT16 usY0, INT16 ancho, INT8U ucColor){
+    int xCenter = (usX0 + (ancho/2));
+    int yCenter = (usY0 + (ancho/2));
+    int radius = ancho/2;
+
+    int x = 0;
+    int y = radius;
+    int p = (5 - radius*4)/4;
+
+    diskPoints(xCenter, yCenter, x, y, ucColor);
+    while (x < y) {
+        x++;
+        if (p < 0) {
+            p += 2*x+1;
+        } else {
+            y--;
+            p += 2*(x-y)+1;
+        }
+        diskPoints(xCenter, yCenter, x, y, ucColor);
+    }
+
+}
+
+void circlePoints(int cx, int cy, int x, int y, INT8U ucColor)
+{
+    if (x == 0) {
+        LCD_PutPixel(cx, cy + y, ucColor);
+        LCD_PutPixel(cx, cy - y, ucColor);
+        LCD_PutPixel( cx + y, cy, ucColor);
+        LCD_PutPixel( cx - y, cy, ucColor);
+    } else if (x == y) {
+        LCD_PutPixel(cx + x, cy + y, ucColor);
+        LCD_PutPixel(cx - x, cy + y, ucColor);
+        LCD_PutPixel(cx + x, cy - y, ucColor);
+        LCD_PutPixel( cx - x, cy - y, ucColor);
+    } else if (x < y) {
+        LCD_PutPixel( cx + x, cy + y, ucColor);
+        LCD_PutPixel( cx - x, cy + y, ucColor);
+        LCD_PutPixel( cx + x, cy - y, ucColor);
+        LCD_PutPixel( cx - x, cy - y, ucColor);
+        LCD_PutPixel( cx + y, cy + x, ucColor);
+        LCD_PutPixel( cx - y, cy + x, ucColor);
+        LCD_PutPixel( cx + y, cy - x, ucColor);
+        LCD_PutPixel(cx - y, cy - x, ucColor);
+    }
+}
+
+// Algoritmo obtenido de:
+// http://groups.csail.mit.edu/graphics/classes/6.837/F98/Lecture6/circle.html
+void Lcd_Draw_Circle(INT16 usX0, INT16 usY0, INT16 ancho, INT8U ucColor){
+    int xCenter = (usX0 + (ancho/2));
+    int yCenter = (usY0 + (ancho/2));
+    int radius = ancho/2;
+
+    int x = 0;
+    int y = radius;
+    int p = (5 - radius*4)/4;
+
+    circlePoints(xCenter, yCenter, x, y, ucColor);
+    while (x < y) {
+        x++;
+        if (p < 0) {
+            p += 2*x+1;
+        } else {
+            y--;
+            p += 2*(x-y)+1;
+        }
+        circlePoints(xCenter, yCenter, x, y, ucColor);
+    }
+}
+
+void Lcd_Draw_Rectangles(INT16 usX0, INT16 usY0, INT16 ancho, INT16 alto, INT8U ucColor)
+{
+	INT16 x;
+	for(x = 0; x < ancho; x++){
+		INT16 y;
+		for(y = 0; y < alto; y++ ){
 			LCD_PutPixel(usX0 + x, usY0 + y, ucColor);
-			--y;
 		}
-		--x;
 	}
 }
 

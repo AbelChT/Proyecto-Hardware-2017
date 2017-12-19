@@ -1,47 +1,64 @@
 /*********************************************************************************************
 * Fichero:	main.c
-* Autor:	
-* Descrip:	codigo de entrada de C
-* Version:	<P6-ARM>	
+* Autor:
+* Descrip:	punto de entrada de C
+* Version:  <P4-ARM.timer-leds>
 *********************************************************************************************/
 
 /*--- ficheros de cabecera ---*/
 #include "44blib.h"
-#include "44b.h"
-#include "lcd.h"
+#include "reversi8_2017.h"
+#include "lcdManager.h"
+#include "button_rebotes.h"
+#include "tpManager.h"
+#include "tp.h"
+#include "timer1.h"
+#include "exception_handler.h"
+#include "timer2.h"
+/*--- variables globales ---*/
+#define USAR_PLACA    // Variable que se define para ejecutar el código de emulación sin placa
 
-/*--- declaracion de funciones ---*/
-void main(void);
-
-/*--- funciones externas ---*/
-extern void Lcd_Test();
-
-/*--- codigo de la funcion ---*/
-
-#define CASILLA_VACIA 0
-#define FICHA_BLANCA  1
-#define FICHA_NEGRA   2
-#define DIM 8
-char __attribute__ ((aligned (8))) tablero[DIM][DIM] = {
-	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-	        {FICHA_NEGRA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-	        {CASILLA_VACIA,FICHA_BLANCA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA},
-	        {CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA,CASILLA_VACIA}
-	    };
-
-void Main(void)
-{
-    sys_init();        /* inicializacion de la placa, interrupciones, puertos y UART */
-    Lcd_Init();
-    //Lcd_mostrar_tablero_completo(tablero,12,13);
-    Lcd_mostrar_tablero_zoom(tablero,1);
-    //Lcd_actualizar_tiempo_ejecucion_tablero_completo(9);
-
-	//Lcd_Test();        /* inicializacion LCD y visualizacion texto y rectangulos     */
-	while(1);
+void cambio_modo_usuario(){
+	volatile int cpsr;
+	asm("mrs %0,CPSR\n":"=r" (cpsr));
+	cpsr = cpsr & ~(0x1f);
+	cpsr = cpsr | 0x10;
+	asm("msr CPSR,%0\n":"=r" (cpsr));
 }
 
+void inicializar_el_sistema() {
+    /* Inicializa controladores */
+    sys_init();         // Inicializacion de la placa, interrupciones y puertos
+    Botones_anti_inicializar();    // inicializamos los pulsadores. Cada vez que se pulse se verá reflejado en el 8led
+    init_exceptions();
+    Init_LcdManager();
+    timer1_inicializar();
+    timer2_inicializar();
+    TS_init();
+    cambio_modo_usuario();
+}
+
+void fn_calibracion() {
+
+    int i = 0;
+
+    for (i = 1; i <= 4; i++) {
+        LcdM_Show_Calibrar(i);
+        while (estado_tp() == TP_NO_PULSADO) {}
+
+    }
+
+    for (i = 1; i <= 4; i++) {
+        LcdM_Show_Calibrar(i);
+        while (estado_tp() == TP_NO_PULSADO) {}
+
+    }
+}
+
+volatile int prueba, prueba2,prueba3,prueba4;
+
+void Main(void) {
+    inicializar_el_sistema();
+    fn_calibracion();
+    reversi8();
+}

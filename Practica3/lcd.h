@@ -129,6 +129,8 @@ void  ReverseLine(INT32U ulHeight, INT32U ulY);
 INT8U LCD_GetPixel(INT16U usX, INT16U usY);
 void Lcd_Init(void);
 void Lcd_Draw_Disks(INT16 usX0, INT16 usY0, INT16 ancho, INT8U ucColor);
+void Lcd_Draw_Circle(INT16 usX0, INT16 usY0, INT16 ancho, INT8U ucColor);
+void Lcd_Draw_Rectangles(INT16 usX0, INT16 usY0, INT16 ancho, INT16 alto, INT8U ucColor);
 
 #ifdef __cplusplus
 }
