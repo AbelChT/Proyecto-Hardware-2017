@@ -1,8 +1,7 @@
 /*********************************************************************************************
 * Fichero:	lcd.c
 * Autor:	
-* Descrip:	funciones de visualizacion y control LCD
-* Version:	<P6-ARM>
+* Descrip:	funciones de visualizacion de formas básicas y control LCD
 *********************************************************************************************/
 
 /*--- ficheros de cabecera ---*/
@@ -10,7 +9,6 @@
 #include "44b.h"
 #include "44blib.h"
 #include "lcd.h"
-#include "bmp.h"
 
 /*--- definicion de macros ---*/
 #define DMA_Byte  (0)
@@ -20,7 +18,6 @@
 	
 /*--- variables externas ---*/
 extern INT8U g_auc_Ascii8x16[];
-extern STRU_BITMAP Stru_Bitmap_gbMouse;
 
 /*--- codigo de la funcion ---*/
 void Lcd_Init(void)

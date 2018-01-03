@@ -115,10 +115,9 @@ static const INT8U texto_volver_jugar[] = "Pulsa para volver a jugar";
 
 void LcdM_Show_Score(int fichas_negras, int fichas_blancas) {
     Lcd_Clr();
-
     Lcd_DspAscII8x16(10, 20, BLACK, texto_resultado);
-    volatile resultado_negras[256];
-    volatile resultado_blancas[256];
+    volatile INT8U resultado_negras[256];
+    volatile INT8U resultado_blancas[256];
     miAtoi(resultado_blancas, fichas_blancas);
     miAtoi(resultado_negras, fichas_negras);
 

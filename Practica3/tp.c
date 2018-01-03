@@ -4,7 +4,6 @@
 
 /*--- include files ---*/
 #include <string.h>
-#include "def.h"
 #include "44b.h"
 #include "44blib.h"
 #include "tp.h"
@@ -23,7 +22,9 @@ volatile static int pulsa = 0;
 volatile static int calibraciones = 0;
 
 
-/*--- function code ---*/
+/**
+ * Función auxiliar que modifica Xmax e Ymax si se introduce una x o una y superior a la Xmax e Ymax actual
+ * */
 void ajustar_x_y() {
     if (x > Xmax) {
         Xmax = x;
@@ -37,6 +38,9 @@ void ajustar_x_y() {
     }
 }
 
+/**
+ * Función auxiliar que calibra la pantalla las 8 primeras veces que se le invoca
+ * */
 int calibrar_tp() {
     if (calibraciones < 8) {
         ajustar_x_y();
@@ -59,8 +63,6 @@ void TSInt(void) __attribute__((interrupt("IRQ")));
 
 void TSInt(void) {
     int i;
-    ULONG tmp;
-    ULONG Pt[5];
 
     // X position Read
     rPDATE = 0x68;
@@ -102,13 +104,17 @@ void TSInt(void) {
     }
 
     rPDATE = 0xb8;                  // should be enabled
-   // DelayTime(100000);   //ParaO0             // delay to set up the next channel
+    // DelayTime(100000);   //ParaO0             // delay to set up the next channel
     DelayTime(500000);     //ParaO2           // delay to set up the next channel
-
     rI_ISPC = BIT_EINT2;            // clear pending_bit
 }
 
 
+/**
+ * Pre: Se ha inicializado el touch screen
+ * Post: Obtiene la coordenada x de la última pulsación (el sistema de referencia es el que utiliza el lcd
+ * para dibujar los píxeles)
+ */
 int getX(void) {
     int temp = x - Xmin;
     int dif = Xmax - Xmin;
@@ -116,6 +122,12 @@ int getX(void) {
     return (320 * temp) / dif;
 }
 
+
+/**
+ * Pre: Se ha inicializado el touch screen
+ * Post: Obtiene la coordenada y de la última pulsación (el sistema de referencia es el que utiliza el lcd
+ * para dibujar los píxeles)
+ */
 int getY(void) {
     int temp = Ymax - y;
     int dif = Ymax - Ymin;
@@ -123,6 +135,11 @@ int getY(void) {
     return ((240 * temp) / dif);
 }
 
+
+/**
+ * Pre: Se ha inicializado el touch screen
+ * Post: Devuelve 1 si se ha pulsado el touch screen desde la última vez que se invocó a esta función
+ */
 int haPulsado(void) {
     if (pulsa == 0) {
         return 0;
@@ -133,14 +150,10 @@ int haPulsado(void) {
 }
 
 
-/*********************************************************************************************
-* name:		TS_init
-* func:		initialize TouchScreen
-* para:		none
-* ret:		none
-* modify:
-* comment:		
-*********************************************************************************************/
+/**
+ * Pre: ---
+ * Post: Inicializa el touch screen
+ */
 void TS_init(void) {
     rI_ISPC |= BIT_EINT2;            // clear pending_bit
     rPUPE = 0x0;                     // Pull up
@@ -157,14 +170,11 @@ void TS_init(void) {
     rINTMSK = rINTMSK & ~(BIT_GLOBAL | BIT_EINT2);// rINTMSK &
 }
 
-/*********************************************************************************************
-* name:		TS_close
-* func:		close TouchScreen
-* para:		none
-* ret:		none
-* modify:
-* comment:		
-*********************************************************************************************/
+
+/**
+ * Pre: Se ha inicializado el touch screen
+ * Post: Finaliza el touch screen
+ */
 void TS_close(void) {
     /* Mask interrupt */
     rINTMSK |= BIT_GLOBAL | BIT_EINT2;

@@ -1,12 +1,49 @@
 #include "lcd.h"
 #include "lcdManager.h"
 
+void Init_LcdManager() {
+}
+
+// No poner estas variables como static const y globales hace que el compilador
+// las elimine al compilar con -O2 (Si se declaran dentro de una funcion este las
+// sustituye por un array vacio)
+static const  INT8U  texto_instrucciones[]  = "Instrucciones: ";
+static const  INT8U  texto_instrucciones_linea1[]  = "TouchPad: ";
+static const  INT8U  texto_instrucciones_linea1b[]  = "-Pulse una region para ampliarla";
+static const  INT8U  texto_instrucciones_linea1bb[]  = "-Pulse fuera para volver del zoom";
+static const  INT8U  texto_instrucciones_linea1c[]  = "-Pulse una casilla para colocar";
+static const  INT8U  texto_instrucciones_linea1c2[]  = " una ficha";
+static const  INT8U  texto_instrucciones_linea1d[]  = "-Pulse durante el parpadeo para";
+static const  INT8U  texto_instrucciones_linea1d2[]  = " cancelar el movimiento";
+static const  INT8U  texto_instrucciones_linea1e[]  = "-Pulse abajo para pasar o finalizar";
+static const  INT8U  texto_instrucciones_linea2[]  = "Botones: ";
+static const  INT8U  texto_instrucciones_linea2b[]  = "-Pulse Izquierdo para aumentar";
+static const  INT8U  texto_instrucciones_linea2b2[]  = " el contador";
+static const  INT8U  texto_instrucciones_linea2c[]  = "-Pulse Derecho para confirmar";
+static const  INT8U  texto_instrucciones_linea2c2[]  = " fila(f)/columna(C)";
+static const  INT8U  texto_instrucciones_linea2d[]  = "-Marque un 8 para pasar/finalizar";
+static const  INT8U  texto_instrucciones_linea2e[]  = "-Izquierdo->Pasar  Derecho->Finalizar";
+static const  INT8U  texto_instrucciones_pulsa[]  = "Pulsa para inicializar: ";
+
 void LcdM_Show_Instructions(void) {
     Lcd_Clr();
-    Lcd_DspAscII8x16(10, 20, BLACK, "Reversi");
-    Lcd_DspAscII8x16(10, 30, BLACK, "Instrucciones2: ");
-    Lcd_DspAscII8x16(10, 40, BLACK, "Instrucciones3: ");
-    Lcd_DspAscII8x16(10, 50, BLACK, "Pulsa para inicializar: ");
+    Lcd_DspAscII8x16(10, 20, BLACK, texto_instrucciones);
+    Lcd_DspAscII8x16(18, 40, BLACK,texto_instrucciones_linea1);
+    Lcd_DspAscII8x16(22, 50, BLACK,texto_instrucciones_linea1b);
+    Lcd_DspAscII8x16(22, 60, BLACK,texto_instrucciones_linea1bb);
+    Lcd_DspAscII8x16(22, 70, BLACK,texto_instrucciones_linea1c);
+    Lcd_DspAscII8x16(22, 80, BLACK,texto_instrucciones_linea1c2);
+    Lcd_DspAscII8x16(22, 90, BLACK,texto_instrucciones_linea1d);
+    Lcd_DspAscII8x16(22, 100, BLACK,texto_instrucciones_linea1d2);
+    Lcd_DspAscII8x16(22, 110, BLACK,texto_instrucciones_linea1e);
+    Lcd_DspAscII8x16(18, 130, BLACK, texto_instrucciones_linea2);
+    Lcd_DspAscII8x16(22, 140, BLACK, texto_instrucciones_linea2b);
+    Lcd_DspAscII8x16(22, 150, BLACK, texto_instrucciones_linea2b2);
+    Lcd_DspAscII8x16(22, 160, BLACK, texto_instrucciones_linea2c);
+    Lcd_DspAscII8x16(22, 170, BLACK, texto_instrucciones_linea2c2);
+    Lcd_DspAscII8x16(22, 180, BLACK, texto_instrucciones_linea2d);
+    Lcd_DspAscII8x16(22, 190, BLACK, texto_instrucciones_linea2e);
+    Lcd_DspAscII8x16(10, 220, BLACK, texto_instrucciones_pulsa);
     Lcd_Dma_Trans();
 
 }
@@ -47,11 +84,11 @@ void miAtoi(char resultado[], int numero) {
         resultado[j] = inverso[i - j];
     }
     resultado[j] = '\0';
-
 }
 
+
 void LcdM_Show_Processing_Time(int tiempo_calculos) {
-    char resultado[256];
+	volatile INT8U  resultado[256];
     miAtoi(resultado, tiempo_calculos);
     Lcd_Draw_Rectangles(240, 134, 40, 16, WHITE); // Limpiamos region anterior
     Lcd_DspAscII8x16(240, 134, BLACK, resultado);
@@ -59,46 +96,63 @@ void LcdM_Show_Processing_Time(int tiempo_calculos) {
 }
 
 void LcdM_Show_Game_Time(int tiempo_juego) {
-    char resultado[256];
+	volatile INT8U  resultado[256];
     miAtoi(resultado, tiempo_juego);
     Lcd_Draw_Rectangles(232, 46, 40, 16, WHITE); // Limpiamos region anterior
     Lcd_DspAscII8x16(244, 44, BLACK, resultado);
     Lcd_Dma_Trans();
 }
 
+static const INT8U texto_resultado[] =  "Resultado: ";
+static const INT8U texto_fichas_negras[] =   "Fichas negras: ";
+static const INT8U texto_fichas_blancas[] =   "Fichas blancas: ";
+static const INT8U texto_ganado_negras[] = "Han ganado las negras";
+static const INT8U texto_ganado_blancas[] = "Han ganado las blancas";
+static const INT8U texto_empate[] = "Han habido un empate";
+static const INT8U texto_volver_jugar[] = "Pulsa para volver a jugar";
+
 void LcdM_Show_Score(int fichas_negras, int fichas_blancas) {
     Lcd_Clr();
-    Lcd_DspAscII8x16(10, 20, BLACK, "Resultado: ");
-    char resultado_negras[256];
-    char resultado_blancas[256];
+    Lcd_DspAscII8x16(10, 20, BLACK, texto_resultado);
+    volatile INT8U resultado_negras[256];
+    volatile INT8U resultado_blancas[256];
     miAtoi(resultado_blancas, fichas_blancas);
     miAtoi(resultado_negras, fichas_negras);
 
-    Lcd_DspAscII8x16(10, 30, BLACK, "Fichas negras: ");
+    Lcd_DspAscII8x16(10, 30, BLACK, texto_fichas_negras);
 
     Lcd_DspAscII8x16(10 + 8 * 15, 30, BLACK, resultado_negras);
 
-    Lcd_DspAscII8x16(10, 40, BLACK, "Fichas blancas: ");
+
+    Lcd_DspAscII8x16(10, 40, BLACK, texto_fichas_blancas);
 
     Lcd_DspAscII8x16(10 + 8 * 16, 40, BLACK, resultado_blancas);
 
-
     if (fichas_negras > fichas_blancas) {
-        Lcd_DspAscII8x16(10, 60, BLACK, "Han ganado las negras");
+
+        Lcd_DspAscII8x16(10, 60, BLACK,texto_ganado_negras );
     } else if (fichas_negras < fichas_blancas) {
-        Lcd_DspAscII8x16(10, 60, BLACK, "Han ganado las negras");
+
+        Lcd_DspAscII8x16(10, 60, BLACK, texto_ganado_blancas );
     } else {
-        Lcd_DspAscII8x16(10, 60, BLACK, "Han habido un empate");
+
+        Lcd_DspAscII8x16(10, 60, BLACK, texto_empate);
     }
-    //Lcd_DspAscII8x16(10,40,BLACK,"Instrucciones3: ");
-    Lcd_DspAscII8x16(10, 80, BLACK, "Pulsa para volver a jugar");
+
+    Lcd_DspAscII8x16(10, 80, BLACK, texto_volver_jugar);
     Lcd_Dma_Trans();
 }
 
 
+static const INT8U texto_pasar_o_finalizar[] ="Pulse o introduzca (8, 8) para pasar";
+static const INT8U texto_tiempo[] ="TIEMPO";
+static const INT8U texto_juego[] ="JUEGO";
+static const INT8U texto_segundos[] ="segundos";
+static const INT8U texto_calculo[] ="CALCULO";
+static const INT8U texto_ns[] ="ns";
+
 void LcdM_Show_Board_No_Zoom(char tablero[][8]) {
     Lcd_Clr();
-
     //Dibujar numeraci�n
     int i = 0;
     while (i <= 7) {
@@ -144,30 +198,21 @@ void LcdM_Show_Board_No_Zoom(char tablero[][8]) {
         ++i;
     }
 
-
-
     // Dibujar mensaje abajo
     Lcd_Draw_Box(2, 218, 314, 236, BLACK);
-    Lcd_DspAscII8x16(10, 220, BLACK, "Pulse o introduzca (8, 8) para pasar");
+    Lcd_DspAscII8x16(10, 220, BLACK, texto_pasar_o_finalizar);
 
     // Dibujar mensajes lados
     Lcd_Draw_Box(224, 10, 304, 42, BLACK);
-    Lcd_DspAscII8x16(240, 10, BLACK, "TIEMPO");
-    Lcd_DspAscII8x16(244, 26, BLACK, "JUEGO");
-
+    Lcd_DspAscII8x16(240, 10, BLACK, texto_tiempo);
+    Lcd_DspAscII8x16(244, 26, BLACK, texto_juego);
     Lcd_Draw_Box(224, 42, 304, 76, BLACK);
-
-    Lcd_DspAscII8x16(232, 60, BLACK, "segundos");
-
-
+    Lcd_DspAscII8x16(232, 60, BLACK, texto_segundos);
     Lcd_Draw_Box(224, 100, 304, 132, BLACK);
-    Lcd_DspAscII8x16(240, 100, BLACK, "TIEMPO");
-    Lcd_DspAscII8x16(236, 116, BLACK, "CALCULO");
-
+    Lcd_DspAscII8x16(240, 100, BLACK, texto_tiempo);
+    Lcd_DspAscII8x16(236, 116, BLACK, texto_calculo);
     Lcd_Draw_Box(224, 132, 304, 164, BLACK);
-
-    Lcd_DspAscII8x16(256, 150, BLACK, "ms");
-
+    Lcd_DspAscII8x16(256, 150, BLACK, texto_ns);
 
     Lcd_Dma_Trans();
 }
@@ -242,77 +287,90 @@ void LcdM_Show_Board_Zoom(char tablero[][8], int region) {
 
     // Dibujar mensaje abajo
     Lcd_Draw_Box(2, 218, 314, 236, BLACK);
-    Lcd_DspAscII8x16(10, 220, BLACK, "Pulse o introduzca (8, 8) para pasar");
+
+    Lcd_DspAscII8x16(10, 220, BLACK, texto_pasar_o_finalizar);
 
     // Dibujar mensajes lados
     Lcd_Draw_Box(224, 10, 304, 42, BLACK);
-    Lcd_DspAscII8x16(240, 10, BLACK, "TIEMPO");
-    Lcd_DspAscII8x16(244, 26, BLACK, "JUEGO");
+
+    Lcd_DspAscII8x16(240, 10, BLACK, texto_tiempo);
+
+    Lcd_DspAscII8x16(244, 26, BLACK, texto_juego);
 
     Lcd_Draw_Box(224, 42, 304, 76, BLACK);
 
-
-    Lcd_DspAscII8x16(232, 60, BLACK, "segundos");
+    Lcd_DspAscII8x16(232, 60, BLACK, texto_segundos);
 
 
     Lcd_Draw_Box(224, 100, 304, 132, BLACK);
-    Lcd_DspAscII8x16(240, 100, BLACK, "TIEMPO");
-    Lcd_DspAscII8x16(236, 116, BLACK, "CALCULO");
+    Lcd_DspAscII8x16(240, 100, BLACK, texto_tiempo);
+
+    Lcd_DspAscII8x16(236, 116, BLACK, texto_calculo);
 
     Lcd_Draw_Box(224, 132, 304, 164, BLACK);
 
-    Lcd_DspAscII8x16(256, 150, BLACK, "ms");
-
+    Lcd_DspAscII8x16(256, 150, BLACK, texto_ns);
 
     Lcd_Dma_Trans();
 }
+
+
+static const INT8U texto_pulsa[] ="PULSA";
+static const INT8U texto_para[] ="PARA";
+static const INT8U texto_pasar[] ="PASAR";
+
+static const INT8U texto_finalizar[] ="FINALIZAR";
+static const INT8U texto_volver[] ="VOLVER";
 
 void LcdM_Show_Skip() {
     Lcd_Clr();
-    Lcd_DspAscII8x16(60, 36, BLACK, "PULSA");
-    Lcd_DspAscII8x16(64, 52, BLACK, "PARA");
-    Lcd_DspAscII8x16(60, 68, BLACK, "PASAR");
+
+    Lcd_DspAscII8x16(60, 36, BLACK, texto_pulsa);
+    Lcd_DspAscII8x16(64, 52, BLACK, texto_para);
+    Lcd_DspAscII8x16(60, 68, BLACK, texto_pasar);
 
     Lcd_Draw_VLine(0, 120, 160, BLACK, 2);
 
-
-
-
-    Lcd_DspAscII8x16(220, 36, BLACK, "PULSA");
-    Lcd_DspAscII8x16(224, 52, BLACK, "PARA");
-    Lcd_DspAscII8x16(204, 68, BLACK, "FINALIZAR");
+    Lcd_DspAscII8x16(220, 36, BLACK, texto_pulsa);
+    Lcd_DspAscII8x16(224, 52, BLACK, texto_para);
+    Lcd_DspAscII8x16(204, 68, BLACK, texto_finalizar);
 
     Lcd_Draw_HLine(0, 320, 120, BLACK, 2);
 
-    Lcd_DspAscII8x16(140, 156, BLACK, "PULSA");
-    Lcd_DspAscII8x16(144, 172, BLACK, "PARA");
-    Lcd_DspAscII8x16(136, 188, BLACK, "VOLVER");
-
+    Lcd_DspAscII8x16(140, 156, BLACK, texto_pulsa);
+    Lcd_DspAscII8x16(144, 172, BLACK,texto_para);
+    Lcd_DspAscII8x16(136, 188, BLACK, texto_volver);
 
     Lcd_Dma_Trans();
 
 }
+static const char pulsa_numero[] ="Pulsa sobre el numero";
+static const INT8U texto_1[] ="1";
+static const INT8U texto_2[] ="2";
+static const INT8U texto_3[] ="3";
+static const INT8U texto_4[] ="4";
 
 void LcdM_Show_Calibrar(int num_pantalla) {
     Lcd_Clr();
+
     switch (num_pantalla) {
         case 1:
             // Arriba
-            Lcd_DspAscII8x16(160, 0, BLACK, "1");
+            Lcd_DspAscII8x16(160, 0, BLACK, texto_1);
             break;
         case 2:
             //Abajo
-            Lcd_DspAscII8x16(160, 220, BLACK, "2");
+            Lcd_DspAscII8x16(160, 220, BLACK, texto_2);
             break;
         case 3:
             //Izquierda
-            Lcd_DspAscII8x16(0, 120, BLACK, "3");
+            Lcd_DspAscII8x16(0, 120, BLACK, texto_3);
             break;
         case 4:
             //Derecha
-            Lcd_DspAscII8x16(310, 120, BLACK, "4");
+            Lcd_DspAscII8x16(310, 120, BLACK, texto_4);
             break;
     }
-    Lcd_DspAscII8x16(80, 120, BLACK, "Pulsa sobre el numero");
+    Lcd_DspAscII8x16(80, 120, BLACK, pulsa_numero );
     Lcd_Dma_Trans();
 }

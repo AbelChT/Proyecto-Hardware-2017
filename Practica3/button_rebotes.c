@@ -9,19 +9,11 @@
 #include "button_rebotes.h"
 #include "44b.h"
 
-
-/*--- variables globales del m�dulo ---*/
-/* int_count la utilizamos para sacar un n�mero por el 8led.
-  Cuando se pulsa un bot�n sumamos y con el otro restamos. �A veces hay rebotes! */
-
 #define ESTADO_BOTON_ESPERANDO 0
 #define ESTADO_BOTON_PULSADO 1
 #define ESTADO_BOTON_MANTENIDO 2
 #define ESTADO_BOTON_REBOTES_INICIALES 3
 #define ESTADO_BOTON_REBOTES_FINALES 4
-
-//volatile typedef enum {ESPERANDO, PULSADO, MANTENIDO, REBOTES_INICIALES, REBOTES_FINALES} estados_boton;
-
 
 volatile static int estado_actual;
 volatile static int boton_en_gestion;
@@ -36,7 +28,6 @@ void gestor_anti_rebotes(void);
 
 void timer0_inicializar(void);
 
-/*--- codigo de funciones ---*/
 void Botones_ISR(void) {
     /* Identificar la interrupcion (hay dos pulsadores)*/
     int which_int = rEXTINTPND;
@@ -96,23 +87,19 @@ void timer0_ISR(void) {
     gestor_anti_rebotes();
 
     /* borrar bit en I_ISPC para desactivar la solicitud de interrupci�n*/
-    rI_ISPC |= BIT_TIMER0; // BIT_TIMER2 est� definido en 44b.h y pone un uno en el bit 13 que correponde al Timer2
+    rI_ISPC |= BIT_TIMER0;
 }
 
 void timer0_inicializar(void) {
-    /* Configuraion controlador de interrupciones */
-    //rINTMOD = 0x00; // Configura las linas como de tipo IRQ  8????
-    //rINTCON = 0x0; // Habilita int. vectorizadas y la linea IRQ (FIQ no)
-
-    /* Establece la rutina de servicio para TIMER2 */
+    /* Establece la rutina de servicio para TIMER0 */
     pISR_TIMER0 = (unsigned) timer0_ISR;
 
     /* Configura el Timer0 */
     rTCFG0 = rTCFG0 | 0x255; // factor de preescalado maximo, para aumentar el retardo de los pulsos
     rTCFG1 = (rTCFG1 & ~(0xf)) |
-             0x4; // selecciona la entrada del mux que proporciona el reloj. La 00 corresponde a un divisor de 1/2.
+             0x4; // selecciona la entrada del mux que proporciona el reloj.
     rTCNTB0 = TIEMPO_RETARDO_REBOTES;
-    rTCMPB0 = 200; // valor de comparaci�n
+    rTCMPB0 = 0; // valor de comparaci�n
 }
 
 void gestor_anti_rebotes(void) {
@@ -120,8 +107,7 @@ void gestor_anti_rebotes(void) {
         case ESTADO_BOTON_PULSADO:
             // Se inicializa el timer
             rINTMSK = rINTMSK & ~(BIT_GLOBAL |
-                                  BIT_TIMER0); // Emascara todas las lineas excepto Timer2 y el bit global (bits 26 y 13, BIT_GLOBAL y BIT_TIMER0 est�n definidos en 44b.h)
-            //rTCNTB0 = TIEMPO_RETARDO_REBOTES; Desde la vez anterior se mantiene
+                                  BIT_TIMER0); // Emascara todas las lineas excepto Timer0 y el bit global
             rTCON = (rTCON & ~(0xf)) | 0x2;
             rTCON = (rTCON & ~(0xf)) | 0x09;
             rINTMSK = rINTMSK | (BIT_EINT4567);
@@ -171,7 +157,8 @@ void gestor_anti_rebotes(void) {
     }
 }
 
-// Devuelve 1 solo la primera vez
+// Devuelve el boton pulsado (BOTON_PULSADO_IZQUIERDA o BOTON_PULSADO_DERECHA) en el caso de que lo esté alguno
+// o BOTON_NO_PULSADO, en caso de que no lo esté ninguno
 int estado_botones(void) {
     int devolver = boton_pulsado;
     boton_pulsado = BOTON_NO_PULSADO;

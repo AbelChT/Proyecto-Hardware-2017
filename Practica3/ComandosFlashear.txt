@@ -1,2 +1,0 @@
-arm-none-eabi-objcopy -O binary Practica_2.elf Practica_2.bin
-C:\Program	Files\EclipseARM\openocd-0.7.0\bin\openocd-0.7.0.exe -f test/arm-fdi-ucm.cfg -c "program Practica_2.bin 0x00000000"

@@ -17,8 +17,6 @@ void LcdM_Show_Board_No_Zoom(char tablero[][8]);
  * */
 void LcdM_Show_Board_Position_Selected(int position);
 
-void LcdM_Show_Board_No_Zoom_Circles_Test();
-
 void LcdM_Show_Game_Time(int tiempo_juego);
 
 void LcdM_Show_Processing_Time(int tiempo_calculos);
@@ -30,6 +28,8 @@ void LcdM_Show_Processing_Time(int tiempo_calculos);
  *  Post: Muestra la pantalla con el zoom indicado
  * */
 void LcdM_Show_Board_Zoom(char tablero[][8], int region);
+
+void Init_LcdManager();
 
 // La pantalla estará dividida en dos y en la derecha podrá toca aqui o pulsa boton derecho para finalizar
 // y en la izquierda lo mismo pero para saltar
