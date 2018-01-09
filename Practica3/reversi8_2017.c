@@ -404,6 +404,11 @@ int aumentarContador(int contador) {
 
 //Variables globales
 
+
+// Máquina de estados principal del juego
+// La función reversi8 es la máquina de estados y las diferentes funciones son los estados de esta máquina de estados
+// y sus transiciones
+
 static int tiempo_juego = 0;
 static int tiempo_procesamiento = 0;
 
@@ -588,8 +593,6 @@ int fn_estado_muestra_parpadeo(int estado_filas, int estado_columnas) {
     LcdM_Show_Board_No_Zoom(tablero);
     D8Led_symbol(MUESTRA_PARPADEO_8_LED_SYMBOL);
     int cuenta_timer1 = 0;
-    int tiempo_aumentado_4 = 0;
-    int tiempo_aumentado_8 = 0;
 
     LcdM_Show_Processing_Time(tiempo_procesamiento);
     LcdM_Show_Game_Time(tiempo_juego);
