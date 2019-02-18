@@ -1,2 +1,2 @@
-# Pr-ctica-1-Proyecto-Hardware
-Primera práctica de la asignatura proyecto hardware
+# Practicas de la asignatura proyecto hardware del curso 2017/2018
+El proyecto completo se encuentra en la carpeta Practica3 en el se hace compatible el juego Reversi con una placa del desarrollo con arquitectura ARM
